@@ -1,0 +1,43 @@
+# The build stage installs and compiles from source, so none of this needs to
+# travel in the build context.
+node_modules
+.next
+*.tsbuildinfo
+
+# Environment files are excluded deliberately, and this is the entry that
+# matters most in this file.
+#
+# `NEXT_PUBLIC_CONVERTER_BASE_URL` is inlined into the bundle during
+# `next build`, which makes any `.env` in the build context an INPUT TO THE
+# IMAGE. Left in, the same Dockerfile would produce different images depending
+# on which machine ran the build - and the value would come from a file that is
+# gitignored, so the image would be reproducible for one person and nobody else.
+# The value comes from the build arg instead. See Dockerfile.
+#
+# `.env.example` is a documentation file that nothing reads, so it goes too;
+# the image has no use for it.
+.env*
+
+.git
+.gitignore
+
+# Tests are not part of the runtime image. The image is verified by loading the
+# page it serves and converting a real file through it.
+tests
+vitest.config.mts
+vitest.setup.ts
+coverage
+
+# The OpenAPI document is the input to `npm run gen:api`, which is run by hand
+# and committed. Nothing imports it at build time or at runtime - the generated
+# `lib/api-types.ts` is what the code reads - so it does not need to be here.
+openapi.json
+
+# Deployment scaffolding: mounted at runtime or used by the host, never baked in.
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# The image does not read documentation. This is also what keeps a README edit
+# from invalidating the build cache.
+*.md

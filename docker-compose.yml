@@ -1,0 +1,90 @@
+# Deployment shape for the web client.
+#
+# This file runs the PAGE ONLY. It expects a reverse proxy in front of it -
+# nginx on the host - which terminates TLS for converter.alakbaroff.com and
+# forwards here. That block already exists and already points at this port:
+# see ../backend/deploy/converter.alakbaroff.com.conf.
+#
+# There is no bundled proxy and no shared network with the API. The browser
+# talks to converterapi.alakbaroff.com directly, so the two containers never
+# speak to each other and there is nothing for them to share.
+
+services:
+  converterweb:
+    build:
+      context: .
+      # --- Build args, not `environment:` ----------------------------------
+      # NEXT_PUBLIC_* is inlined into the bundle during `next build`, so this
+      # value has to be present when the IMAGE is built, and a container started
+      # with a different one would go on serving the old value from the bundle.
+      # Change the URL, then rebuild. See Dockerfile.
+      #
+      # `:?` rather than a default, so a missing .env stops the build with a
+      # sentence instead of producing an image that calls the wrong host. An
+      # empty value is a real deployment (same-origin), which is exactly why
+      # leaving it empty by accident would not announce itself.
+      args:
+        NEXT_PUBLIC_CONVERTER_BASE_URL: ${NEXT_PUBLIC_CONVERTER_BASE_URL:?set NEXT_PUBLIC_CONVERTER_BASE_URL in .env}
+    image: converterweb
+    restart: unless-stopped
+
+    # --- How your proxy reaches it ------------------------------------------
+    # Published on LOOPBACK ONLY, so nginx running on this host can reach it and
+    # nothing else can - not the LAN, not the internet.
+    #
+    # KEEP THIS. Dropping the 127.0.0.1 prefix would put an open page on your
+    # network, and the obvious next step for anyone who found it is to start
+    # uploading files to the API behind it.
+    #
+    # Host port 3011 is the port the nginx block expects. Container port 3011 is
+    # what the Dockerfile's PORT and EXPOSE say, so the two agree and the
+    # mapping is a formality - it is written out anyway, because a silent
+    # container-side default is how these two numbers drift apart.
+    ports:
+      - '127.0.0.1:3011:3011'
+
+    # --- Resource caps ------------------------------------------------------
+    # This serves one static page and a few hundred kilobytes of JavaScript. It
+    # does no computation, holds no files and makes no outbound requests, so the
+    # caps are here to bound a leak, not to ration real work.
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 1
+    pids_limit: 128
+
+    # --- Filesystem ---------------------------------------------------------
+    # The server reads its own bundle and nothing else, so the root filesystem
+    # is read-only. Next does keep one cache directory, though, and will try to
+    # write there - which on a read-only root fails at runtime, not at build
+    # time. Mounting it as tmpfs gives Next somewhere to put it without giving
+    # up the read-only root.
+    #
+    # Mode 1777 because the process is uid 1000 and Docker creates the mount
+    # point owned by root. The same mode the API uses for /tmp, for the same
+    # reason.
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /app/.next/cache:size=64m,mode=1777
+
+    # --- Privileges ---------------------------------------------------------
+    # Nothing here needs a capability, and nothing needs to elevate.
+    user: '1000:1000'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # --- Environment --------------------------------------------------------
+    # Deliberately absent. PORT, HOSTNAME and NODE_ENV are set in the image, and
+    # the API base URL is not a runtime setting at all - it is in the bundle.
+    # Restating any of it here would only be a second copy to drift out of sync.
+
+    # No `healthcheck:` either: the image carries one, and compose inherits it.
+    # A copy here would be a second one to keep in step, for no gain.
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

@@ -52,6 +52,70 @@ of it on purpose: a handler would add its own timeout to a budget that is
 already 120 seconds, and it would hold a second copy of a 25 MiB upload in
 memory while streaming it through.
 
+As deployed, this **is** set — to `https://converterapi.alakbaroff.com`, in
+`.env`. The page and the API are two hostnames, so every call is cross-origin,
+and both bullets above are load-bearing rather than theoretical.
+
+## Docker
+
+```bash
+cp .env.example .env    # then set NEXT_PUBLIC_CONVERTER_BASE_URL
+docker compose up -d --build
+```
+
+Publishes on **`127.0.0.1:3011`** — loopback only, for the nginx block that
+already fronts this hostname (`../backend/deploy/converter.alakbaroff.com.conf`,
+which expects exactly this port). Nothing else can reach it, including your LAN.
+
+The one thing to know before changing the URL: **`NEXT_PUBLIC_*` is inlined at
+build time.** The value is a *build argument*, so it is baked into the image and
+`docker compose up` alone will not pick up an edit — change `.env`, then
+`--build`. A container started with a different value would go on serving the
+old one, and since an empty base URL is a supported deployment, that mistake
+does not announce itself. `docker-compose.yml` requires the variable rather than
+defaulting it for the same reason.
+
+The image is a standalone Next server (no npm, no source), runs as uid 1000 with
+a read-only root filesystem and no capabilities, and carries its own
+healthcheck. It needs no outbound network access: it serves a page, and the
+browser makes the API calls.
+
+### Deploying
+
+Pushing to `master` runs `.github/workflows/deploy.yml`, which SSHes in, pulls
+the checkout at `/pool/www/converter.alakbaroff.com/frontend`, and rebuilds the
+`converterweb` service there. The build happens on the server, so the machine
+that pushes does not need Docker.
+
+Three repository secrets, which are **per repository** — the identically-named
+ones on the API repo do not carry over:
+
+```bash
+gh secret set SSH_HOST     --repo Samad126/converterweb
+gh secret set SSH_USER     --repo Samad126/converterweb
+gh secret set SSH_PASSWORD --repo Samad126/converterweb
+```
+
+And one file that no clone can supply, because it is gitignored:
+
+```bash
+# On the server, once.
+echo 'NEXT_PUBLIC_CONVERTER_BASE_URL=https://converterapi.alakbaroff.com' \
+  > /pool/www/converter.alakbaroff.com/frontend/.env
+```
+
+This is a hard prerequisite, not a convenience. The value is inlined at build
+time, so without it the build produces a bundle pointed at the wrong host — and
+the workflow checks for the file first and fails with that sentence rather than
+letting compose report a missing variable.
+
+The workflow then does two things beyond starting the container: it polls
+`127.0.0.1:3011` until the page answers, and it fetches the served HTML, walks
+the script chunks it references, and asserts the base URL is in one of them.
+The second check is there because the first cannot catch this deployment's
+characteristic failure — a bundle built with a stale or empty URL serves a
+perfectly good page that then reports the API as down.
+
 ## The API types cannot drift from the spec
 
 `openapi.json` is the contract, and `lib/api-types.ts` is generated from it by
