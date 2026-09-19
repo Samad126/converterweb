@@ -105,16 +105,14 @@ echo 'NEXT_PUBLIC_CONVERTER_BASE_URL=https://converterapi.alakbaroff.com' \
 ```
 
 This is a hard prerequisite, not a convenience. The value is inlined at build
-time, so without it the build produces a bundle pointed at the wrong host — and
-the workflow checks for the file first and fails with that sentence rather than
-letting compose report a missing variable.
+time, so without the file the image is built with an empty base URL and the
+bundle it serves points at the wrong host. What catches that is
+`docker-compose.yml`'s `${NEXT_PUBLIC_CONVERTER_BASE_URL:?...}` — compose
+refuses to build and names the variable, rather than quietly producing a page
+that calls `converter.alakbaroff.com/formats` and reports the API as down.
 
-The workflow then does two things beyond starting the container: it polls
-`127.0.0.1:3011` until the page answers, and it fetches the served HTML, walks
-the script chunks it references, and asserts the base URL is in one of them.
-The second check is there because the first cannot catch this deployment's
-characteristic failure — a bundle built with a stale or empty URL serves a
-perfectly good page that then reports the API as down.
+`--build` is the other half. It is what re-runs `next build` with the current
+value, so a deploy that skips it goes on serving the bundle it was built with.
 
 ## The API types cannot drift from the spec
 
