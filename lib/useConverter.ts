@@ -40,6 +40,7 @@ import {
   rejectedFailure,
 } from "./errors";
 import {
+  acceptedExtensions as matrixExtensions,
   downloadExtension,
   expectedMediaType,
   findSource,
@@ -104,6 +105,15 @@ export interface Converter {
   cooldownRemainingMs: number;
   canConvert: boolean;
 
+  /**
+   * The format this instance is fixed to, or `null` when the person chooses.
+   *
+   * The panel reads this to decide whether to render the format picker at all.
+   */
+  lockedTargetId: TargetId | null;
+  /** The extensions this instance accepts — the whole matrix, unless narrowed. */
+  acceptedExtensions: readonly string[];
+
   previewText: string | null;
   isLoadingPreview: boolean;
 
@@ -120,7 +130,34 @@ export interface Converter {
   loadPreview: () => void;
 }
 
-export function useConverter(): Converter {
+export interface ConverterOptions {
+  /**
+   * The one format this instance produces.
+   *
+   * A conversion page passes its target here, and the effect is a *lock*: the
+   * picker is not rendered (see `StatusPanel`), `targetId` is always this, and
+   * the page cannot be talked into producing anything else. Somebody who wanted
+   * a different format is better served by the links to the sibling pages than
+   * by a picker that would silently turn this page into a different one.
+   *
+   * Read once, on the first render.
+   */
+  lockedTargetId?: TargetId;
+  /**
+   * Narrow the accepted uploads to these extensions.
+   *
+   * Also a conversion page's concern: `/word_to_pdf` takes the three Word
+   * extensions, and a PNG dropped on it should be refused with a sentence about
+   * *this* page rather than quietly converted because the service happens to
+   * accept PNGs. `null` means the whole matrix.
+   */
+  acceptedExtensions?: readonly string[];
+}
+
+export function useConverter(options?: ConverterOptions): Converter {
+  const lockedTargetId = options?.lockedTargetId ?? null;
+  const offeredExtensions = options?.acceptedExtensions ?? null;
+
   const [formats, setFormats] = useState<FormatsResponse | null>(null);
   const [formatsFailure, setFormatsFailure] = useState<Failure | null>(null);
 
@@ -128,7 +165,7 @@ export function useConverter(): Converter {
   const [healthFailure, setHealthFailure] = useState<Failure | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
-  const [targetId, setTargetId] = useState<TargetId | null>(null);
+  const [targetId, setTargetId] = useState<TargetId | null>(lockedTargetId);
   const [phase, setPhase] = useState<Phase>({ name: "ready" });
 
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -240,6 +277,17 @@ export function useConverter(): Converter {
 
   const cooldownRemainingMs = cooldownUntil === null ? 0 : Math.max(0, cooldownUntil - now);
 
+  /**
+   * Return the target to its resting value.
+   *
+   * Every path that used to clear the target goes through here, because on a
+   * locked page `null` is not a resting value — it is a page that has forgotten
+   * what it is about. On those pages the resting value is the lock itself.
+   */
+  const resetTarget = useCallback((): void => {
+    setTargetId(lockedTargetId);
+  }, [lockedTargetId]);
+
   const selectFile = useCallback(
     (next: File): void => {
       if (!formats) return;
@@ -248,7 +296,7 @@ export function useConverter(): Converter {
       // no half-selected state is left behind.
       if (next.size > MAX_UPLOAD_BYTES) {
         setFile(null);
-        setTargetId(null);
+        resetTarget();
         setPhase({
           name: "failed",
           failure: rejectedFailure(oversizedFileMessage(next.name, next.size)),
@@ -257,12 +305,25 @@ export function useConverter(): Converter {
       }
 
       const nextSource = findSource(formats, next.name);
-      if (nextSource === null) {
+
+      // Two ways to be refused here, and they are different sentences. The
+      // matrix meaning "the service does not take this at all" is one; this
+      // page meaning "I am the Word to PDF page" is the other. A PNG dropped on
+      // `word_to_pdf` is refused by the second rule even though the first would
+      // allow it, and the sentence names the extensions *this page* takes.
+      const narrowed =
+        offeredExtensions !== null &&
+        nextSource !== null &&
+        !offeredExtensions.includes(nextSource.extension.toLowerCase());
+
+      if (nextSource === null || narrowed) {
         setFile(null);
-        setTargetId(null);
+        resetTarget();
         setPhase({
           name: "failed",
-          failure: rejectedFailure(unsupportedFileMessage(formats, next.name)),
+          failure: rejectedFailure(
+            unsupportedFileMessage(formats, next.name, offeredExtensions ?? undefined),
+          ),
         });
         return;
       }
@@ -272,25 +333,39 @@ export function useConverter(): Converter {
       setFile(next);
       setPhase({ name: "ready" });
       // A target chosen for a previous file survives only if this file can
-      // still reach it.
+      // still reach it — except on a locked page, where the target is not the
+      // person's choice to lose. There the reachability is somebody else's
+      // problem: the picker is gone, so an unreachable lock is surfaced as a
+      // disabled button with a reason rather than as a silently cleared format.
       setTargetId((current) =>
-        current !== null && isReachable(nextSource, current) ? current : null,
+        lockedTargetId !== null
+          ? lockedTargetId
+          : current !== null && isReachable(nextSource, current)
+            ? current
+            : null,
       );
     },
-    [formats, revokeDownloadUrl],
+    [formats, lockedTargetId, offeredExtensions, resetTarget, revokeDownloadUrl],
   );
 
   const clearFile = useCallback((): void => {
     revokeDownloadUrl();
     setPreviewText(null);
     setFile(null);
-    setTargetId(null);
+    resetTarget();
     setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  }, [resetTarget, revokeDownloadUrl]);
 
-  const selectTarget = useCallback((next: TargetId): void => {
-    setTargetId(next);
-  }, []);
+  const selectTarget = useCallback(
+    (next: TargetId): void => {
+      // A locked page has no picker to click, so this cannot fire from one; the
+      // guard is here so that a future caller cannot talk a page out of its own
+      // subject.
+      if (lockedTargetId !== null) return;
+      setTargetId(next);
+    },
+    [lockedTargetId],
+  );
 
   const start = useCallback((): void => {
     if (!formats || !file || !targetId) return;
@@ -375,11 +450,11 @@ export function useConverter(): Converter {
         // A `404` or a `415` means this build's copy of the matrix disagrees
         // with the server's. Asking again is the only useful response.
         if (invalidatesMatrix(failure)) void loadFormats();
-        if (failure.status === 404) setTargetId(null);
+        if (failure.status === 404) resetTarget();
 
         setPhase({ name: "failed", failure });
       });
-  }, [file, formats, loadFormats, revokeDownloadUrl, targetId]);
+  }, [file, formats, loadFormats, resetTarget, revokeDownloadUrl, targetId]);
 
   const cancel = useCallback((): void => {
     // The rejection from the abort is what moves the state, so that a cancel
@@ -394,9 +469,9 @@ export function useConverter(): Converter {
     setPreviewText(null);
     setElapsedMs(0);
     setFile(null);
-    setTargetId(null);
+    resetTarget();
     setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  }, [resetTarget, revokeDownloadUrl]);
 
   const chooseAnotherFormat = useCallback((): void => {
     handleRef.current?.abort();
@@ -404,9 +479,9 @@ export function useConverter(): Converter {
     revokeDownloadUrl();
     setPreviewText(null);
     setElapsedMs(0);
-    setTargetId(null);
+    resetTarget();
     setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  }, [resetTarget, revokeDownloadUrl]);
 
   const loadPreview = useCallback((): void => {
     if (phase.name !== "done" || !phase.result.isText) return;
@@ -424,8 +499,26 @@ export function useConverter(): Converter {
     formats !== null &&
     file !== null &&
     targetId !== null &&
+    source !== null &&
+    // The picker only ever hands over a reachable target, so on an unlocked
+    // page this is already true. It is here for the locked ones: a page whose
+    // format is fixed has no picker to disable, so if the service stops
+    // supporting its conversion the only honest thing left is a button that
+    // will not run, next to the server's own sentence about why.
+    isReachable(source, targetId) &&
     cooldownRemainingMs === 0 &&
     phase.name === "ready";
+
+  /**
+   * The extensions this instance accepts, narrowed for a conversion page.
+   *
+   * Falls back to the whole matrix, and is empty before it has loaded — which
+   * is what the drop zone shows in its skeleton state.
+   */
+  const accepted = useMemo<readonly string[]>(
+    () => offeredExtensions ?? (formats === null ? [] : matrixExtensions(formats)),
+    [formats, offeredExtensions],
+  );
 
   return {
     formats,
@@ -447,6 +540,9 @@ export function useConverter(): Converter {
     elapsedMs,
     cooldownRemainingMs,
     canConvert,
+
+    lockedTargetId,
+    acceptedExtensions: accepted,
 
     previewText,
     isLoadingPreview,

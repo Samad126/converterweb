@@ -1,8 +1,22 @@
 # File converter — web client
 
-One page, one job: pick a file, pick an output format, get the converted file
-back. Next.js (App Router) + TypeScript + Tailwind, tested with Vitest, React
-Testing Library and MSW.
+Convert a document, spreadsheet, presentation or image into another format.
+Next.js (App Router) + TypeScript + Tailwind, tested with Vitest, React Testing
+Library and MSW.
+
+The site has three surfaces:
+
+| Surface | What it is |
+| --- | --- |
+| `/` | The landing page: what the service does, and a grid of every conversion it can perform |
+| `/{source}_to_{target}` | One page per conversion — thirty-six of them, e.g. `/word_to_pdf` |
+| `/conversions` | The full index, grouped by document family |
+
+Every conversion page carries the converter itself, showing only that
+conversion: the format is fixed, the file input accepts only the extensions that
+page is for, and there is no format picker to distract from the one job. There is
+no separate "convert anything" page either — `/convert`, which the single-page
+version of this app served at `/`, is gone.
 
 The service is consumed by an already-shipped Android client, so its behaviour
 is pinned. Nothing in here wraps, improves or re-interprets it: the client sends
@@ -18,7 +32,7 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run build        # production build
 npm start            # serve the build
-npm run test         # vitest, 117 tests
+npm run test         # vitest, 155 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
 npm run gen:api      # regenerate lib/api-types.ts from openapi.json
@@ -127,6 +141,126 @@ The output is committed and never edited by hand — `lib/contract.ts` is the on
 file that reaches into its shape, so a regeneration that renames something
 breaks at compile time in one place rather than in twenty call sites.
 
+## Where the conversion pages come from
+
+`lib/catalog.ts` is the editorial layer: it decides **which pages exist and what
+they say**. It does not decide **what can be converted** — that is still answered
+on every page, at runtime, by `GET /formats`, through `findSource` / `isReachable`
+/ `unreachableReason` exactly as before.
+
+The split exists because a page that has to rank in a search engine has to carry
+its prose and its internal links in the server-rendered HTML, which rules out
+asking the service what it supports. So there is a curated table, and the rule
+that used to forbid one — see `lib/formats.ts` and `tests/matrix.test.tsx` — had
+to be reconciled with it rather than quietly broken:
+
+| Concern | Source of truth |
+| --- | --- |
+| Which pages exist, and what they say | `lib/catalog.ts` |
+| Whether a conversion is possible at all | `GET /formats`, at runtime |
+| Which targets a chosen file can reach | `isReachable`, at runtime |
+
+Three things keep the catalog honest, and none of them is a promise:
+
+1. **Types.** Each entry's `target` is a `TargetId` generated from `openapi.json`
+   into `lib/contract.ts`, so naming a target the contract does not define is a
+   compile error.
+2. **A page cannot lie, even when it is wrong.** A conversion page locks its
+   format and narrows its input, and neither can make it claim a conversion the
+   service does not have: `canConvert` requires the live matrix to confirm the
+   target is reachable, so a stale page shows the server's own reason and a
+   button that refuses to run. See `components/ConverterShell.tsx`.
+3. **A test.** `tests/catalog.test.tsx` checks every extension and every pair
+   against the matrix fixture, in both directions — so a page for a conversion
+   the service cannot perform fails, and so does a conversion the service supports
+   with no page.
+
+`tests/matrix.test.tsx` still bans extension literals everywhere in `app/`,
+`components/` and `lib/` **except `lib/catalog.ts`**, which is named and justified
+inline there. The ban is a proxy for the rule above; the catalog test checks the
+rule directly, which is why the exemption is not a hole. If you are adding a page
+that needs to name a format, put it in the catalog rather than widening that
+exemption.
+
+### A page is about one conversion
+
+`/word_to_pdf` shows the word-to-PDF conversion and nothing else. Two props on
+`ConverterShell` do that, and both narrow rather than merely default:
+
+| Prop | Effect |
+| --- | --- |
+| `lockedTargetId` | Fixes the output. The format picker is not rendered, and the three steps become two |
+| `acceptedExtensions` | Narrows the file input. `/word_to_pdf` takes the three Word extensions; a PNG is refused with a sentence about *this* page |
+
+The second one matters more than it looks. Without it a PNG dropped on the Word
+page converts happily, because the *service* accepts PNGs — true, but not what
+the page said it would do, and the page is the thing that was indexed.
+
+Three details worth knowing:
+
+- **The picker is gone, not disabled.** A control with one option in it is noise;
+  the format is already stated in the heading, the badge pair and the copy. A
+  visitor who wanted a different format is served better by the sibling links
+  than by a picker that would silently turn this page into a different one.
+- **The narrow `accept` also filters the file dialog**, so the rejection path is
+  only reachable by drag-and-drop, which bypasses `accept` by design. That is why
+  `tests/locked.test.tsx` drops the wrong file rather than choosing it —
+  `userEvent.upload` honours `accept`, so choosing one could not reproduce the
+  case at all.
+- **A 415 offers a different file, not a different format.** On a page with one
+  format, "choose another format" would be a button that does nothing, so
+  `StatusPanel` maps that recovery to the only action left.
+
+Leaving both props off gives back the universal tool, which is how the converter
+tests still drive the four states end to end — but note that **no page uses it
+any more**. If you are looking for somewhere to delete, that unlocked branch and
+`components/FormatPicker.tsx` are the candidates; they are kept because
+`tests/matrix.test.tsx` treats the picker as the guard on the "no hard-coded
+matrix" rule, and because a "convert anything" page would need them back.
+
+### Slugs
+
+`{source}_to_{target}`, both from the service's own vocabulary: `/word_to_pdf`,
+`/png_to_pdf`, `/csv_to_xlsx`. The slug is derived from the pair rather than
+stored, so the two cannot disagree.
+
+`app/[conversion]/page.tsx` is a root-level dynamic segment, which means it also
+matches every *other* single-segment path — `/favicon.ico` reaches it with
+`conversion = "favicon.ico"`. Static routes win over dynamic ones, so `/`,
+`/conversions`, `/robots.txt`, `/sitemap.xml` and `/icon.svg` all resolve to
+their own files; everything else falls through. `dynamicParams = false` then
+makes a miss a static 404 rather than a page rendered into `notFound()`, which is
+the right semantic — the set of pages is closed — but it has one visible
+consequence worth knowing about when reading server logs:
+
+```
+Error: Internal: NoFallbackError
+```
+
+That is Next's **control flow, not a failure** — it is how the server says "not
+one of my prerendered paths, fall through to the 404". It appears in the log and
+the response is still a correct 404. It shows up most often for `/favicon.ico`,
+because browsers request that path whether or not the page declares an icon; the
+`app/icon.svg` above is what stops them asking, and after it there is no such
+line for a normal browser. A stray request from an old client that ignores the
+`<link rel="icon">` tag will still log one, harmlessly — there is deliberately no
+guessed-at binary `favicon.ico` to silence it.
+
+Source groups fold together extensions the service already treats identically —
+`.docx`, `.doc` and `.docm` are all `word`, because they share a Writer import
+filter and reach the same targets. `tests/catalog.test.tsx` asserts that
+grouping is lossless; if the service ever gave two extensions in a group
+different targets, the test would fail rather than a page quietly overpromising.
+
+Two consequences worth knowing:
+
+- **There are 36 pages, not 52.** The matrix has 16 source extensions and 52
+  extension-to-target pairs; grouping collapses them to 36.
+- **PDF is never an input.** There is no `.pdf` entry in the service's `SOURCES`,
+  so there is no `pdf_to_word` page and no `pdf_to_png` page, and the landing
+  page never implies otherwise. Every other converter on the internet does this
+  the other way round, which is why `/not-found` says so explicitly.
+
 ## What the code is built on
 
 | Rule | Where it lives |
@@ -137,6 +271,14 @@ breaks at compile time in one place rather than in twenty call sites.
 | A body that is missing or not JSON falls back to `HTTP <status>` | `lib/errors.ts` (`fallbackMessage`) |
 | `error.code` is never displayed | `ErrorNote` is never given it; asserted in `tests/failures.test.tsx` |
 | The matrix comes from `GET /formats` at runtime | `lib/formats.ts`, and the whole of `tests/matrix.test.tsx` |
+| Which conversion pages exist is editorial; what converts is not | `lib/catalog.ts` (pages), `GET /formats` (capability) |
+| A page locks its format and narrows its input; it never offers a picker | `components/ConverterShell.tsx`, `app/[conversion]/page.tsx` |
+| A page cannot claim a conversion the live matrix does not confirm | `canConvert` in `lib/useConverter.ts`, `tests/locked.test.tsx` |
+| The grid is server-rendered links; the filter is CSS `:has()` only | `components/ToolGrid.tsx`, `app/globals.css` |
+| Internal navigation is `next/link`; the 72 bulk links opt out of prefetch | `components/ToolCard.tsx`, `components/SiteFooter.tsx` |
+| Every conversion page has one `<h1>` and its own canonical | `app/[conversion]/page.tsx`, `tests/seo.test.tsx` |
+| Structured data only describes what the page visibly shows | `lib/schema.ts`, compared in `tests/seo.test.tsx` |
+| PDF is an output, never an input — no page says otherwise | asserted in `tests/catalog.test.tsx` |
 | Image targets are archives, decided by `multiple` | `lib/constants.ts`, `lib/formats.ts` (`downloadExtension`) |
 | Both RFC 6266 filename forms, `filename*` preferred | `lib/contentDisposition.ts` |
 | Exactly one `file` part, as `application/octet-stream` | `lib/api.ts`, asserted byte-for-byte in `tests/transport.test.ts` |
@@ -225,6 +367,44 @@ rule with a bold **Error** label; success is an inverted chip with a check
 glyph. Dark mode is a straight inversion of the same tokens under
 `prefers-color-scheme`.
 
+### The landing page, and the icons it could not have
+
+The landing page is modelled on iLovePDF's: a hero, a row of category pills, and
+a grid of tool cards. That reference marks each tool with a coloured app icon —
+a red W for Word, a green X for Excel — which is precisely the affordance this
+design has no colours to spend on.
+
+The replacement is inversion. `components/FormatBadge.tsx` draws a monogram tile
+per format and pairs them: **outline for the source, solid black for the target**,
+joined by an arrow. `W → PDF` says which way the conversion goes in a way that a
+grid of thirty-six cards otherwise makes genuinely hard to see, and it reuses the
+one emphasis device the rest of the app already has.
+
+Two other decisions on that page are worth knowing:
+
+- **Every internal link is `next/link`, so navigation is client-side.** A plain
+  `<a href>` — which this app used at first — is a full document load on every
+  click: the browser re-downloads the page, re-parses it and re-hydrates React.
+  That is exactly what a browser-rendered site feels like, and it is not what a
+  Next app should feel like.
+- **The two bulk link sets opt out of prefetching.** `ToolCard` and
+  `SiteFooter` carry thirty-six links each, so `prefetch={false}` keeps them from
+  preloading dozens of pages nobody will open. Everything else — the header,
+  breadcrumbs, related conversions — keeps Next's default, where the preload is
+  cheap and makes the click instant. Client-side routing and speculative
+  preloading are separate concerns with separate switches; turning off the second
+  is not a reason to give up the first.
+
+- **The category filter is CSS, not JavaScript.** Every card is an internal link
+  the site is counting on, so hiding cards by re-rendering would take those links
+  out of the HTML. Instead the pills are real `<input type="radio">` elements —
+  the same choice `FormatPicker` makes — and `:has()` does the filtering. All
+  thirty-six links are always in the document.
+- **The display type is the only fluid step in the scale.** `--text-3xl` is a
+  `clamp()`; every other size is fixed. A headline that fills a phone's width
+  overruns a desktop's measure, and one token with a `clamp()` solves it without
+  a breakpoint ladder.
+
 ## Accessibility
 
 - `role="alert"` for failures, `aria-live="polite"` for status; the running
@@ -257,6 +437,9 @@ tests/errors.test.ts               the envelope, our sentences, status → recov
 tests/format.test.ts               bytes, durations, extensions
 tests/preview.test.ts              escaping and the preview document
 tests/achromatic.test.ts           the black-and-white rule, compiled
+tests/catalog.test.tsx             the catalog against the matrix, both directions
+tests/locked.test.tsx              a page locks its format, narrows its input, and cannot lie
+tests/seo.test.tsx                 one h1, metadata, JSON-LD, and every link in the HTML
 ```
 
 Two things are tested outside MSW, and both for the same reason — MSW's XHR
@@ -283,14 +466,26 @@ upload throws before it leaves the client.
 
 ## Not done
 
-- **The browser pass.** The visual check at 320 px and 1440 px, light and dark,
-  keyboard-only, with `prefers-reduced-motion`, and at 200 % zoom has not been
-  run: it needs a live service, and the service was mid-change. Everything it
-  would have looked at is asserted where it can be asserted without a viewport
-  (the achromatic compile, the focus and contrast rules in CSS, the reduced
-  motion block), but "it looks right" is still unconfirmed by eye.
+- **The browser pass, in full.** It has been run further than before: the landing
+  page, a conversion page and the converter were rendered in headless Chromium at
+  360 px and 1440 px, in light and dark, and the built stylesheet was checked to
+  contain the `:has()` filter rules and no chromatic value. Still unverified by
+  eye: **keyboard-only traversal**, **200 % zoom**, and **`prefers-reduced-motion`**
+  in a real browser. Those three are asserted where they can be asserted without
+  a viewport (the focus rules, the reduced-motion block), but "it behaves" is not
+  the same as "it looks right", and neither has been watched.
 - **The end-to-end run against the service.** The request and response shapes
   were confirmed against the running service with real documents — a real
   `.docx` to `pdf`, `txt` and a `.pptx` to a ZIP of page images, checking
-  `Content-Type`, `Content-Disposition` and `X-Request-Id` on each — but the
-  full flow through the page, in a browser, has not been driven.
+  `Content-Type`, `Content-Disposition` and `X-Request-Id` on each — but the full
+  flow through the page, in a browser, has not been driven. Note that it cannot be
+  driven from a local `npm start`: the deployed API's CORS allows only
+  `https://converter.alakbaroff.com`, so a page served from `localhost` gets a
+  correct but unhelpful "the server could not be reached".
+- **`robots.txt` and the sitemap are not submitted anywhere.** They exist and are
+  correct; nothing has been registered with a search console, so nothing has been
+  indexed yet.
+- **No OG image.** Link previews fall back to the title and description. A
+  generated one would need `app/opengraph-image.tsx` and a font, and there is no
+  `public/` directory — which the Dockerfile explicitly notes would need its own
+  `COPY` line.

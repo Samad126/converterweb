@@ -26,13 +26,23 @@
    */
   --color-*: initial;
 
-  /* The type scale: 12 / 14 / 16 / 20 / 28 / 40. */
+  /* The type scale: 12 / 14 / 16 / 20 / 28 / 40 / fluid 36–64. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.75rem;
   --text-2xl: 2.5rem;
+  /*
+   * The display size, and the only fluid step in the scale.
+   *
+   * The landing page needs a headline that fills a phone's width without
+   * overrunning a desktop's measure, and a fixed step cannot do both: 40px is
+   * cramped at 1440 and 64px is a wall of three words at 320. `clamp()` solves
+   * it in one declaration instead of a breakpoint ladder, and it is confined to
+   * this one token so the rest of the scale stays predictable.
+   */
+  --text-3xl: clamp(2.25rem, 1.35rem + 3.6vw, 4rem);
 }
 
 :root {
@@ -598,5 +608,648 @@
     min-height: 56px;
     border: 1px solid var(--rule);
     background-color: var(--surface);
+  }
+
+  /* Same box as the primary button it stands in for. */
+  .skeleton-button {
+    min-height: 48px;
+  }
+
+  /* ==================================================================== */
+  /* Marketing shell                                                       */
+  /* ==================================================================== */
+
+  /*
+   * The wide container, as opposed to the 640px column the converter itself
+   * sits in. Two measures, because they do opposite jobs: a form wants a short
+   * line so the eye does not have to travel, and a page of thirty-six tiles
+   * wants the width for the grid to be a grid.
+   */
+  .shell {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  /* First in the tab order, invisible until it is focused. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    z-index: 10;
+    padding: 10px 16px;
+    background-color: var(--ink);
+    color: var(--paper);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .skip-link:focus {
+    left: 0;
+    top: 0;
+  }
+
+  /* ---------------------------------------------------------- header */
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--rule);
+    background-color: var(--paper);
+  }
+
+  .site-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 60px;
+  }
+
+  /*
+   * The wordmark: half plain, half inverted block. The one place the product
+   * name appears as a mark rather than as text, and the only piece of
+   * "branding" the design has — which is the point, since there is no colour
+   * to spend on one.
+   */
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .wordmark-block {
+    padding: 3px 6px;
+    background-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .site-nav {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-left: auto;
+  }
+
+  .site-nav a {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .site-nav a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+
+  /* Room for the nav. Below this it is hidden rather than collapsed — every
+     link in it is in the footer of every page, so nothing becomes unreachable. */
+  @media (min-width: 860px) {
+    .site-nav {
+      display: flex;
+    }
+  }
+
+  /* ------------------------------------------------------------ hero */
+
+  .hero {
+    border-bottom: 1px solid var(--rule);
+    background-color: var(--surface);
+    padding-block: 56px 64px;
+    text-align: center;
+  }
+
+  .hero-title {
+    margin-inline: auto;
+    max-width: 22ch;
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
+
+  .hero-lede {
+    margin: 20px auto 0;
+    max-width: 62ch;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  /* The one place the button is not full width, so it needs its own sizing. */
+  .hero-cta {
+    width: auto;
+    padding-inline: 28px;
+  }
+
+  /* --------------------------------------------------------- sections */
+
+  .section {
+    padding-block: 56px;
+  }
+
+  /* A hairline above, for every section after the first. */
+  .section-rule {
+    border-top: 1px solid var(--rule);
+  }
+
+  .section-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .section-lede {
+    margin-top: 10px;
+    max-width: 68ch;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  /* --------------------------------------------------- page header */
+
+  .page-title {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+
+  .page-lede {
+    margin-top: 16px;
+    max-width: 62ch;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .body-text {
+    max-width: 68ch;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  /* ------------------------------------------------------ breadcrumbs */
+
+  .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .breadcrumbs a {
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .breadcrumbs a:hover {
+    color: var(--ink);
+  }
+
+  .breadcrumb-sep {
+    margin-left: 6px;
+    color: var(--n-400);
+  }
+
+  /* ==================================================================== */
+  /* The tool grid                                                         */
+  /* ==================================================================== */
+
+  /*
+   * The category filter, done in CSS.
+   *
+   * Each pill is a real radio, and each radio is immediately followed by its
+   * label — which is what lets `input:checked + .pill` style the selected one
+   * with no JavaScript and no state. The filtering itself is the `:has()` block
+   * below.
+   */
+  .pill-set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 7px 14px;
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: border-color var(--dur) ease-out, background-color var(--dur) ease-out;
+    user-select: none;
+  }
+
+  .pill:hover {
+    border-color: var(--n-500);
+  }
+
+  /* Selected is the inversion, the same mark the primary button uses. */
+  .pill-set input:checked + .pill {
+    border-color: var(--ink);
+    background-color: var(--ink);
+    color: var(--paper);
+    font-weight: 700;
+  }
+
+  .pill-set input:focus-visible + .pill {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /*
+   * The filter.
+   *
+   * One rule per family, keyed on the id `ToolGrid` generates for that family's
+   * radio. Written out rather than generated, because CSS cannot loop and a
+   * `:has()` selector cannot match on a value it has not been told about.
+   *
+   * `display: none` hides a card from a sighted visitor; it removes nothing from
+   * the document, so all thirty-six links stay in the HTML for a crawler. The
+   * "All" pill has no rule — a card is shown until a category is chosen, which
+   * makes the default case the one that needs no CSS at all.
+   */
+  .tool-browser:has(#family-writer:checked) .tool-card:not([data-family="writer"]),
+  .tool-browser:has(#family-calc:checked) .tool-card:not([data-family="calc"]),
+  .tool-browser:has(#family-impress:checked) .tool-card:not([data-family="impress"]),
+  .tool-browser:has(#family-draw:checked) .tool-card:not([data-family="draw"]) {
+    display: none;
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .tool-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color var(--dur) ease-out, background-color var(--dur) ease-out;
+  }
+
+  .tool-card:hover {
+    border-color: var(--ink);
+    background-color: var(--surface);
+  }
+
+  .tool-card-title {
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .tool-card-blurb {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  /* ----------------------------------------------------------- badges */
+
+  .badge-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /*
+   * The monogram tile. Outline for a source, solid for a target — which is how
+   * a grid of thirty-six cards says "this one goes this way" without a colour.
+   */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--ink);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .badge[data-size="sm"] {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  /* "HTML" and "DOCX" need a smaller face than "W" to stay in the same box,
+     which keeps every tile the same size and every grid on a baseline. */
+  .badge[data-long="true"] {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .badge[data-size="sm"][data-long="true"] {
+    font-size: 8px;
+  }
+
+  .badge[data-filled="true"] {
+    background-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .badge-arrow {
+    flex-shrink: 0;
+    color: var(--n-500);
+  }
+
+  /* ==================================================================== */
+  /* Content sections                                                      */
+  /* ==================================================================== */
+
+  /* ---------------------------------------------------------- steps */
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 24px;
+    margin-top: 28px;
+    list-style: none;
+  }
+
+  .steps-compact {
+    margin-top: 4px;
+  }
+
+  .step {
+    padding-top: 16px;
+    border-top: 2px solid var(--ink);
+  }
+
+  .steps-compact .step {
+    border-top-width: 1px;
+    border-top-color: var(--rule);
+  }
+
+  .step-index {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-title {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .step-body {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  /* --------------------------------------------------------- panels */
+
+  .panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .panel-body {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  /* ---------------------------------------------------- link columns */
+
+  .link-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 28px;
+    margin-top: 28px;
+  }
+
+  .link-column-heading {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .link-list {
+    margin-top: 12px;
+    list-style: none;
+  }
+
+  .link-list li + li {
+    margin-top: 8px;
+  }
+
+  .link-list a {
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .link-list a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+
+  /* ---------------------------------------------------- related links */
+
+  .link-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .link-chip {
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color var(--dur) ease-out, background-color var(--dur) ease-out;
+  }
+
+  .link-chip:hover {
+    border-color: var(--ink);
+    background-color: var(--surface);
+  }
+
+  /* --------------------------------------------------------- facts */
+
+  .fact-list {
+    list-style: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .fact-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  /* ----------------------------------------------------------- faq */
+
+  .faq {
+    margin-top: 20px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .faq-question {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    /* The default disclosure triangle, replaced by the marker below so both
+       the size and the spacing match the rest of the page. */
+    list-style: none;
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question::after {
+    content: "+";
+    flex-shrink: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .faq-item[open] .faq-question::after {
+    content: "−";
+  }
+
+  .faq-question:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+
+  .faq-answer {
+    padding-bottom: 18px;
+    max-width: 68ch;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  /* ==================================================================== */
+  /* Footer                                                                */
+  /* ==================================================================== */
+
+  .site-footer {
+    margin-top: 40px;
+    border-top: 1px solid var(--ink);
+    padding-block: 44px 56px;
+  }
+
+  .footer-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 28px;
+  }
+
+  .footer-heading {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .footer-list {
+    margin-top: 12px;
+    list-style: none;
+  }
+
+  .footer-list li + li {
+    margin-top: 7px;
+  }
+
+  .footer-list a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .footer-list a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+
+  .footer-note {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    max-width: 80ch;
   }
 }

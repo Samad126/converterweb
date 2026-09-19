@@ -15,13 +15,20 @@
  * believed existed — and there the form has to come back so the person can
  * choose differently. `recoveryFor` decides which, and the form is rendered
  * only for the second kind.
+ *
+ * **Locked pages.** A conversion page has one format and no picker: step 2 does
+ * not exist, the three steps become two, and the file input offers only the
+ * extensions that page accepts. See `ConverterShell`. The rest of this panel is
+ * deliberately identical between the two modes — the progress, the errors, the
+ * result and the recovery paths are the same behaviour, because they are the
+ * same conversion; only the choice has gone.
  */
 import { useCallback } from "react";
 
 import type { FormatsResponse, SourceFormat, TargetId } from "@/lib/contract";
 import { recoveryFor, type Failure, type Recovery } from "@/lib/errors";
 import { formatBytes } from "@/lib/format";
-import { acceptAttribute, acceptedExtensions, findTarget } from "@/lib/formats";
+import { findTarget, isReachable, unreachableReason } from "@/lib/formats";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import type { HealthState, Phase } from "@/lib/useConverter";
 
@@ -47,6 +54,10 @@ export interface StatusPanelProps {
   canConvert: boolean;
   previewText: string | null;
   isLoadingPreview: boolean;
+  /** The fixed format, when this panel is on a page about one conversion. */
+  lockedTargetId: TargetId | null;
+  /** The extensions this panel accepts — the matrix, unless the page narrowed it. */
+  acceptedExtensions: readonly string[];
 
   onSelectFile: (file: File) => void;
   onClearFile: () => void;
@@ -73,6 +84,8 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     canConvert,
     previewText,
     isLoadingPreview,
+    lockedTargetId,
+    acceptedExtensions,
     onSelectFile,
     onClearFile,
     onSelectTarget,
@@ -83,7 +96,25 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     onLoadPreview,
   } = props;
 
+  const locked = lockedTargetId !== null;
   const selectedTarget = targetId === null ? null : findTarget(formats, targetId);
+
+  // With no picker there is no second step, so Convert moves up rather than
+  // leaving a gap where the format chooser used to be.
+  const convertStep = locked ? 2 : 3;
+
+  /**
+   * A locked page whose format the source cannot reach.
+   *
+   * Impossible on a catalogue page — the groups are built from the matrix — but
+   * entirely possible if the service drops a target after a page was built. The
+   * page cannot offer another format, so the honest thing is to say why and
+   * leave the button refusing to run.
+   */
+  const unreachable =
+    locked && source !== null && lockedTargetId !== null && !isReachable(source, lockedTargetId)
+      ? unreachableReason(formats, lockedTargetId)
+      : null;
 
   /**
    * Move the person to the file input rather than leaving them to find it.
@@ -106,6 +137,15 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
           // The file stays; the format is what has to change. A fresh copy of
           // the matrix has already been fetched by the time this is on screen,
           // so the picker that comes back is the server's current one.
+          //
+          // A locked page has no other format to offer, so the same failure has
+          // only one way forward: a different file. Offering "choose another
+          // format" on a page with one format would be a button that does
+          // nothing.
+          if (locked) {
+            focusFileInput();
+            return;
+          }
           onChooseAnotherFormat();
           return;
         case "start-over":
@@ -115,7 +155,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
           onStart();
       }
     },
-    [focusFileInput, onChooseAnotherFormat, onReset, onStart],
+    [focusFileInput, locked, onChooseAnotherFormat, onReset, onStart],
   );
 
   if (phase.name === "done") {
@@ -166,8 +206,8 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
             {file === null ? (
               <DropZone
                 id={FILE_INPUT_ID}
-                accept={acceptAttribute(formats)}
-                acceptedLabel={acceptedExtensions(formats).join(", ")}
+                accept={acceptedExtensions.join(",")}
+                acceptedLabel={acceptedExtensions.join(", ")}
                 limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
                 disabled={busy}
                 onSelect={onSelectFile}
@@ -191,20 +231,35 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
             )}
           </section>
 
+          {/*
+            Step 2, and only on a page that has not already decided. A locked
+            page skips it entirely rather than showing a picker with one option
+            in it — the format is stated in the page's heading, its badge and its
+            copy, and a control with nothing to control is just noise.
+          */}
+          {locked ? null : (
+            <section className="flex flex-col gap-3">
+              <h2 className="step-heading">
+                <span className="step-number">2</span>{" "}
+                Choose an output format
+              </h2>
+
+              <FormatPicker
+                name="target"
+                formats={formats}
+                source={source}
+                selected={targetId}
+                inert={busy}
+                onSelect={onSelectTarget}
+              />
+            </section>
+          )}
+
           <section className="flex flex-col gap-3">
             <h2 className="step-heading">
-              <span className="step-number">2</span>{" "}
-              Choose an output format
+              <span className="step-number">{convertStep}</span>{" "}
+              Convert
             </h2>
-
-            <FormatPicker
-              name="target"
-              formats={formats}
-              source={source}
-              selected={targetId}
-              inert={busy}
-              onSelect={onSelectTarget}
-            />
 
             {selectedTarget?.multiple ? (
               <p className="meta">
@@ -212,13 +267,8 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
                 image per page.
               </p>
             ) : null}
-          </section>
 
-          <section className="flex flex-col gap-3">
-            <h2 className="step-heading">
-              <span className="step-number">3</span>{" "}
-              Convert
-            </h2>
+            {unreachable !== null ? <p className="notice">{unreachable}</p> : null}
 
             {busy && phase.name === "converting" ? (
               <ProgressMeter

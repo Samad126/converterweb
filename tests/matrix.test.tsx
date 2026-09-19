@@ -218,6 +218,40 @@ describe("no hard-coded matrix", () => {
   /** Generated from `openapi.json`; it is the contract, not a table we keep. */
   const GENERATED = "lib/api-types.ts";
 
+  /**
+   * The one file allowed to name an extension, and the reasoning.
+   *
+   * The rule this test enforces is that the app must never decide *what can
+   * become what* from a table of its own — that answer belongs to `GET /formats`
+   * alone, so that teaching the service a new format does not require teaching
+   * the client one too. The test approximates that rule by banning extension
+   * literals outright, which is a good proxy for `lib/formats.ts`,
+   * `components/FormatPicker.tsx` and everywhere else the UI reasons about
+   * formats.
+   *
+   * `lib/catalog.ts` is the exception, and it is a deliberate one. It is the
+   * editorial layer behind the per-conversion pages: thirty-six pages that each
+   * have to say, in static HTML, "Files accepted: .docx, .doc and .docm" — a
+   * sentence a crawler has to be able to read without running any JavaScript,
+   * which rules out reading it from the service at render time. Prose that names
+   * the formats it accepts cannot avoid naming formats.
+   *
+   * What it still may not do is claim a capability, and that is enforced three
+   * other ways rather than by this ban:
+   *
+   *   - `tests/catalog.test.tsx` checks every extension and every pair in the
+   *     catalog against the matrix fixture, exhaustively and in both
+   *     directions. That is a *direct* check of the thing this literal ban only
+   *     approximates, which is why exempting one file here is not a hole.
+   *   - `target` is a `TargetId` generated from the contract, so a target the
+   *     service does not define is a compile error.
+   *   - Every page resolves reachability through `isReachable` against the live
+   *     matrix before it offers a conversion, so a catalog that has gone stale
+   *     shows a disabled format and the server's own reason rather than a
+   *     button that fails.
+   */
+  const EDITORIAL = "lib/catalog.ts";
+
   function sourceFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = join(directory, entry.name);
@@ -227,9 +261,10 @@ describe("no hard-coded matrix", () => {
   }
 
   it("names no accepted file extension anywhere outside the generated types", () => {
-    const files = APP_DIRECTORIES.flatMap(sourceFiles).filter(
-      (file) => relative(process.cwd(), file) !== GENERATED,
-    );
+    const files = APP_DIRECTORIES.flatMap(sourceFiles).filter((file) => {
+      const relativePath = relative(process.cwd(), file);
+      return relativePath !== GENERATED && relativePath !== EDITORIAL;
+    });
     expect(files.length).toBeGreaterThan(10);
 
     for (const file of files) {

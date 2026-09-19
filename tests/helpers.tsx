@@ -1,19 +1,24 @@
 /**
  * The three gestures every UI test makes, in one place.
  *
- * The app is one page with one form, so a test reads as: open the page, choose
- * a file, choose a format, convert. Anything more specific than that belongs in
- * the test that needs it.
+ * The app is one form with one job, so a test reads as: open it, choose a file,
+ * choose a format, convert. Anything more specific than that belongs in the test
+ * that needs it.
+ *
+ * Tests render `ConverterShell` rather than a page. The converter used to be
+ * `app/page.tsx`; it is now a component the landing page, `/convert` and all
+ * thirty-six conversion pages share, so rendering the component under test is
+ * both closer to the truth and immune to the next round of routing.
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 
-import Page from "@/app/page";
+import { ConverterShell } from "@/components/ConverterShell";
 
-/** Render the page and wait until the matrix has loaded and the form is live. */
+/** Render the converter and wait until the matrix has loaded and the form is live. */
 export async function setupPage(): Promise<UserEvent> {
   const user = userEvent.setup();
-  render(<Page />);
+  render(<ConverterShell />);
 
   // Waiting for the primary button is waiting for both the matrix and the
   // health probe: it is disabled until the service has said it is ready.

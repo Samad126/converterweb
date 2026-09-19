@@ -166,11 +166,20 @@ export function formatList(items: readonly string[]): string {
  * The accepted list comes from the matrix, so this stays true when the service
  * learns a new extension. The filename is included because the person dropped
  * something and is owed the name of what was refused.
+ *
+ * `accepted` overrides that list for the pages that only take part of it — a
+ * `/word_to_pdf` page accepts the three Word extensions and nothing else, and
+ * replying to somebody who dropped a PNG there with the service's full list is a
+ * sentence about a different page.
  */
-export function unsupportedFileMessage(formats: FormatsResponse, filename: string): string {
+export function unsupportedFileMessage(
+  formats: FormatsResponse,
+  filename: string,
+  accepted: readonly string[] = acceptedExtensions(formats),
+): string {
   const extension = extensionOf(filename);
   const described = extension === "" ? "has no file extension" : `is a ${extension} file`;
-  return `${filename} ${described}, which this converter does not accept. Accepted: ${acceptedExtensions(formats).join(", ")}.`;
+  return `${filename} ${described}, which this converter does not accept. Accepted: ${accepted.join(", ")}.`;
 }
 
 /**

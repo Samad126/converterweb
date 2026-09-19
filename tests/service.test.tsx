@@ -11,7 +11,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, delay, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import Page from "@/app/page";
+import { ConverterShell } from "@/components/ConverterShell";
 import { CLIENT_ABORT_MS } from "@/lib/constants";
 
 import { BASE, envelope } from "./msw/handlers";
@@ -206,7 +206,7 @@ describe("loading the matrix", () => {
       }),
     );
 
-    render(<Page />);
+    render(<ConverterShell />);
 
     // Before the matrix arrives: the same class the loaded picker carries, so
     // the button underneath it does not move when the formats arrive.
@@ -228,7 +228,7 @@ describe("loading the matrix", () => {
       ),
     );
 
-    render(<Page />);
+    render(<ConverterShell />);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Something went wrong on the server.");

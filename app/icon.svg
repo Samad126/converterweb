@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="File Converter">
+  <!--
+    The site's favicon, as a document with a folded corner on an inverted block.
+
+    Achromatic, like everything else: the black tile is the same inversion the
+    buttons and badge targets use, and the white glyph is the same file shape
+    `components/Icons.tsx` draws in the drop zone.
+
+    The black tile on a transparent background is deliberate rather than a black
+    tile with rounded corners, because it has to survive two different browser
+    chromes. On a light tab bar the tile reads; on a dark one the tile
+    disappears and the white glyph carries the mark instead. Inverting on
+    `prefers-color-scheme` would be tidier, but support for media queries inside
+    an SVG favicon is inconsistent, so this relies on nothing.
+  -->
+  <rect width="32" height="32" fill="#000000"/>
+  <path
+    d="M10.5 6.5h7.6l5.4 5.4v13.1a1.5 1.5 0 0 1-1.5 1.5H10.5A1.5 1.5 0 0 1 9 25V8a1.5 1.5 0 0 1 1.5-1.5Z"
+    fill="#ffffff"
+  />
+  <!-- The folded corner, cut out of the sheet. -->
+  <path d="M18.1 6.5 23.5 11.9h-5.4z" fill="#000000"/>
+</svg>
