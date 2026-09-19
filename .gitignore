@@ -1,0 +1,21 @@
+# Dependencies
+/node_modules
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment. `.env.example` is the committed template; nothing here is secret
+# (the API is unauthenticated by design), but a local base URL is still local.
+.env
+.env.local
+.env*.local
+
+# Test output and coverage
+/coverage
+
+# Editor and OS noise
+.DS_Store
+*.swp

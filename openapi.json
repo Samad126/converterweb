@@ -1,0 +1,687 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Universal file converter",
+    "version": "2.0.0",
+    "summary": "Converts documents, spreadsheets, presentations and images using LibreOffice headless.",
+    "description": "Uploads a file and receives it converted to another format.\n\n## The contract\n\nThis API is consumed by a **shipped Android client**, so the following\nproperties are part of the contract and are not free to change.\n\n> **Breaking change: `POST /convert` without a target no longer exists.**\n> Clients must post to `/convert/pdf`. A client still using the bare path\n> gets the catch-all `404`, whose message tells the user to update the app.\n\n- **Success is `200` with the target's own media type.** For `pdf` that is\n  exactly `application/pdf`, with no charset suffix: the client compares the\n  header and refuses anything else, so a stray `text/html` on a `200` is a\n  client-visible failure.\n- **Failure is a non-2xx with the JSON error envelope.** The client reads\n  `error.message` and shows it verbatim in a dialog, falling back to\n  `\"HTTP <status>\"` when the body is missing or is not JSON.\n- **A failure is never a `200`.** The client checks the status before it\n  reads anything, so a `200` is treated as the converted file and fails\n  downstream.\n- **`error.message` is user-facing prose.** It is a complete sentence with\n  no stack traces, no paths and no codes, because a person reads it.\n  `error.code` is for logs and metrics only; the client never displays it.\n\n## Choosing the output format\n\nThe target is part of the path and is REQUIRED: `/convert/pdf`,\n`/convert/xlsx`, `/convert/png`. There is deliberately no bare `/convert`\nthat assumes a format - one address that means one thing is easier to\ndocument and to test than two that mean the same thing.\n\n**Not every source can become every target.** The matrix is finite and\ndeliberate - `GET /formats` returns it in full, machine-readably. Asking for\na target that exists but is not reachable from your file is a `415`; asking\nfor a target that does not exist at all is a `404`. Both messages list the\nalternatives, so a client never has to hard-code the table to give a useful\nerror.\n\n## Filenames\n\nThe response offers the uploaded file's name with the new extension:\n`Quarterly report.docx` converted to `pdf` downloads as\n`Quarterly report.pdf`. The name is sanitised before it is echoed - path\nsegments and control characters are removed - and a name with nothing usable\nin it becomes `converted.<ext>`.\n\n## Image targets are archives\n\n`png` and `jpg` produce **one image per page**, so they answer with\n`application/zip` holding `slide-1.png`, `slide-2.png`, ... This is true even\nfor a one-page document: the content type must not depend on how many pages\nthe upload happened to have, or every client has to sniff what it received.\n\n## Timing\n\nThe client aborts the whole request after **120 seconds**. The server's own\ndeadline is **90 seconds** and covers the entire pipeline - including the\nrender-then-rasterise second step an image target needs - so that it can\nstill answer with a proper `504` instead of being killed mid-conversion.\n\n## Uploads\n\nRequests are `multipart/form-data` with exactly one file part. The import\nfilter is chosen from the **filename extension**, never from the declared\nMIME type: the client deliberately sends `application/octet-stream`, and a\nhostile client could declare anything at all.\n",
+    "contact": {
+      "name": "Converter maintainers"
+    },
+    "license": {
+      "name": "Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "convert",
+      "description": "Document conversion."
+    },
+    {
+      "name": "discovery",
+      "description": "What this service can do."
+    },
+    {
+      "name": "ops",
+      "description": "Operational endpoints."
+    }
+  ],
+  "paths": {
+    "/convert/{target}": {
+      "post": {
+        "tags": [
+          "convert"
+        ],
+        "operationId": "convertToFormat",
+        "summary": "Convert a file to a named format",
+        "description": "Converts the upload to `target`, which must be an id from\n`GET /formats` (`pdf`, `odt`, `docx`, `txt`, `html`, `rtf`, `epub`,\n`ods`, `xlsx`, `csv`, `odp`, `pptx`, `png`, `jpg`).\n\nThe document is parsed by LibreOffice, which is a large C++ codebase\nhandling untrusted input. **Treat a conversion failure as an expected,\nnormal event**, not as an incident.\n\nThe endpoint is unauthenticated and cannot be otherwise: the client is\nan APK, so any secret shipped inside it is public. Requests are\nrate-limited per IP and conversions run under a bounded concurrency\nlimit; both are sources of `429` and `503` that a well-formed request\ncan hit.\n",
+        "x-max-upload-bytes": 26214400,
+        "parameters": [
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "description": "The format to produce. Case-sensitive, without a leading dot.\n",
+            "schema": {
+              "$ref": "#/components/schemas/TargetId"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Upload"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ConvertedToTarget"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/UnknownTarget"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedTarget"
+          },
+          "422": {
+            "$ref": "#/components/responses/Encrypted"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ConvertFailed"
+          },
+          "503": {
+            "$ref": "#/components/responses/Busy"
+          },
+          "504": {
+            "$ref": "#/components/responses/Timeout"
+          }
+        }
+      }
+    },
+    "/formats": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "operationId": "listFormats",
+        "summary": "The conversion matrix",
+        "description": "Every source extension this service accepts, and every target each one\ncan become.\n\nExists so a client does not have to hard-code the table: the shipped\nclient is an APK, and without this, teaching it a new output format\nwould mean shipping a new APK. A client that hard-codes the matrix will\nsilently disagree with the server the first time the server grows.\n",
+        "responses": {
+          "200": {
+            "description": "The matrix.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sources",
+                    "targets"
+                  ],
+                  "properties": {
+                    "sources": {
+                      "type": "array",
+                      "description": "Accepted upload types, keyed by extension.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "extension",
+                          "mediaType",
+                          "family",
+                          "targets"
+                        ],
+                        "properties": {
+                          "extension": {
+                            "type": "string",
+                            "example": ".docx"
+                          },
+                          "mediaType": {
+                            "type": "string"
+                          },
+                          "family": {
+                            "type": "string",
+                            "description": "The LibreOffice document family that handles it.\nSources in the same family convert the same way.\n",
+                            "enum": [
+                              "writer",
+                              "calc",
+                              "impress",
+                              "draw"
+                            ]
+                          },
+                          "targets": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/TargetId"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "targets": {
+                      "type": "array",
+                      "description": "Every format this service can produce.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "extension",
+                          "mediaType",
+                          "label",
+                          "multiple"
+                        ],
+                        "properties": {
+                          "id": {
+                            "$ref": "#/components/schemas/TargetId"
+                          },
+                          "extension": {
+                            "type": "string",
+                            "example": ".pdf"
+                          },
+                          "mediaType": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "Short name, as used in error messages.",
+                            "example": "PDF"
+                          },
+                          "multiple": {
+                            "type": "boolean",
+                            "description": "When true the response is a ZIP of one file per page\nrather than a single file. Always an archive for\nthese, even for a one-page source.\n"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "sources": [
+                    {
+                      "extension": ".docx",
+                      "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                      "family": "writer",
+                      "targets": [
+                        "pdf",
+                        "odt",
+                        "txt",
+                        "html",
+                        "rtf",
+                        "epub"
+                      ]
+                    }
+                  ],
+                  "targets": [
+                    {
+                      "id": "pdf",
+                      "extension": ".pdf",
+                      "mediaType": "application/pdf",
+                      "label": "PDF",
+                      "multiple": false
+                    },
+                    {
+                      "id": "png",
+                      "extension": ".png",
+                      "mediaType": "image/png",
+                      "label": "PNG",
+                      "multiple": true
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "operationId": "health",
+        "summary": "Liveness check",
+        "description": "Returns `ok` once the service is ready to convert.\n\nThe service only begins listening after LibreOffice has been confirmed\non `PATH`, the rasteriser has been confirmed, the metric-compatible\nfonts have been verified, and a warm-up conversion has succeeded **for\nevery document family** - so reaching this endpoint at all means the\nwhole matrix is ready, not merely that the process is up.\n\nIt does not exercise a conversion of its own.\n",
+        "responses": {
+          "200": {
+            "description": "The service is ready.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "ok"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "requestBodies": {
+      "Upload": {
+        "required": true,
+        "description": "Exactly one file part named `file`. Additional parts, or a part under\na different name, are rejected with `400`.\n\nThe overall body limit is **26214400 bytes (25 MB)**, matching the\nclient's own `MAX_UPLOAD_BYTES` and the reverse proxy's body limit.\nExceeding it at any layer produces `413`.\n",
+        "content": {
+          "multipart/form-data": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "file"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "The file to convert. Its **filename extension** selects the\nimport filter and must be one of the extensions listed by\n`GET /formats` (case-insensitive). The declared `Content-Type`\nof this part is ignored.\n\nThe filename is never used as a path on disk: the upload is\nwritten to a server-generated name inside a per-request\ntemporary directory, so a name like `../../etc/passwd.docx`\nis harmless.\n"
+                }
+              }
+            },
+            "encoding": {
+              "file": {
+                "contentType": "application/octet-stream"
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "TargetId": {
+        "type": "string",
+        "description": "Identifier of an output format, as used in the `/convert/{target}` path\nand returned by `GET /formats`.\n",
+        "enum": [
+          "pdf",
+          "odt",
+          "docx",
+          "txt",
+          "html",
+          "rtf",
+          "epub",
+          "ods",
+          "xlsx",
+          "csv",
+          "odp",
+          "pptx",
+          "png",
+          "jpg"
+        ]
+      },
+      "ErrorCode": {
+        "type": "string",
+        "description": "Stable machine-readable identifier for the failure. For logs, metrics\nand support only - the client never shows this to the user.\n",
+        "enum": [
+          "E_CONVERT_FAILED",
+          "E_TIMEOUT",
+          "E_ENCRYPTED",
+          "E_UNSUPPORTED",
+          "E_UNSUPPORTED_TARGET",
+          "E_UNKNOWN_TARGET",
+          "E_TOO_LARGE",
+          "E_BUSY",
+          "E_BAD_REQUEST",
+          "E_RATE_LIMITED",
+          "E_INTERNAL"
+        ]
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "description": "The body of every non-2xx response. There are no exceptions: error\npaths that Express or multer would normally render as an HTML page are\noverridden to produce this shape.\n",
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              "message": {
+                "type": "string",
+                "description": "A complete sentence shown verbatim in a dialog on the phone.\nNever a stack trace, a file path or a bare code.\n",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ConvertedToPdf": {
+        "description": "The converted document, as PDF.\n",
+        "headers": {
+          "X-Request-Id": {
+            "description": "Identifier for this request, also present in the server log line.\nQuote it when reporting a problem.\n",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "Content-Disposition": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "attachment; filename=\"Quarterly report.pdf\"; filename*=UTF-8''Quarterly%20report.pdf"
+          }
+        },
+        "content": {
+          "application/pdf": {
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "description": "The PDF bytes, beginning with `%PDF-`."
+            }
+          }
+        }
+      },
+      "ConvertedToTarget": {
+        "description": "The converted file.\n\nThe media type is the target's own - `application/pdf` for `pdf`,\n`text/csv` for `csv`, and so on. **The image targets are the exception**:\n`png` and `jpg` always answer with `application/zip`, because there is\none image per page and a ZIP is the only way to put several files in one\nresponse.\n",
+        "headers": {
+          "X-Request-Id": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "Content-Disposition": {
+            "description": "The uploaded file's name with the target's extension. Sanitised:\npath segments and control characters are stripped, and a name with\nnothing usable in it becomes `converted.<ext>`.\n\nSent in both RFC 6266 forms - a quoted ASCII `filename` for older\nclients and a percent-encoded UTF-8 `filename*` for current ones -\nso a non-ASCII name survives.\n",
+            "schema": {
+              "type": "string"
+            },
+            "example": "attachment; filename=\"Quarterly report.xlsx\"; filename*=UTF-8''Quarterly%20report.xlsx"
+          }
+        },
+        "content": {
+          "application/pdf": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/zip": {
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "description": "One image per page, named `slide-1.png`, `slide-2.png`, ...\n"
+            }
+          },
+          "application/vnd.oasis.opendocument.text": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/vnd.oasis.opendocument.spreadsheet": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/vnd.oasis.opendocument.presentation": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/epub+zip": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/rtf": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/csv": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "The request was not a usable upload: no file part named `file`, several\nfiles, or a part under a different name.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_BAD_REQUEST",
+                "message": "The document could not be received. Please try again."
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "No such endpoint. In practice this means the client is older than the\nserver, which is why the message tells the user to update the app.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_BAD_REQUEST",
+                "message": "The converter is not available at this address. Please update the app and try again."
+              }
+            }
+          }
+        }
+      },
+      "UnknownTarget": {
+        "description": "The target in the path is not a format this service can produce at all -\n`/convert/banana`. Distinct from a real target the source cannot become,\nwhich is a `415`: this one is a `404` because the address does not exist.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_UNKNOWN_TARGET",
+                "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG."
+              }
+            }
+          }
+        }
+      },
+      "TooLarge": {
+        "description": "The upload exceeds 26214400 bytes (25 MB). Applied by the reverse proxy,\nby the multipart parser and by the client, all using the same limit.\n\nAlso returned when an image target would produce more pages than the\nserver will hold in memory at once, which is a bound on the archive\nrather than on the upload.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_TOO_LARGE",
+                "message": "This document is too large to convert."
+              }
+            }
+          }
+        }
+      },
+      "Unsupported": {
+        "description": "The filename extension is not one this service accepts. The extension -\nnot the declared MIME type - selects the import filter.\n\nThe message lists the accepted extensions, because the person holding\nthe phone has a file they believe is a document, and \"unsupported\"\nalone tells them nothing about what would work.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_UNSUPPORTED",
+                "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .odt, .ods, .odp, .xlsx, .pptx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg."
+              }
+            }
+          }
+        }
+      },
+      "UnsupportedTarget": {
+        "description": "A real target, but not one this source can become - asking for `png`\nfrom a `.docx`, say. This is a `415` and not a `404`, because the\naddress exists; it is the combination that does not.\n\nThe message names what the document CAN become instead, because the\nuseful answer to \"can I have this as X\" is \"no, but here is what you can\nhave\". The list varies by source, so the example below is the one for a\nWord document; see `GET /formats` for the rest.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_UNSUPPORTED_TARGET",
+                "message": "A .docx file can be converted to: PDF, ODT, TXT, HTML, RTF, EPUB."
+              }
+            }
+          }
+        }
+      },
+      "Encrypted": {
+        "description": "The document is password protected. Detected before LibreOffice runs,\nbecause LibreOffice reports an encrypted document the same way it\nreports a corrupt one, and telling a user their file is damaged when it\nmerely needs a password is both wrong and unhelpful.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_ENCRYPTED",
+                "message": "This document is password protected."
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests from this address in the current window.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_RATE_LIMITED",
+                "message": "Too many requests. Try again in a moment."
+              }
+            }
+          }
+        }
+      },
+      "ConvertFailed": {
+        "description": "The conversion produced nothing. Covers a damaged document, a document\nwhose content does not match its extension, and a zero-byte upload.\n\nNote that LibreOffice's exit code is **not** used to decide this:\n`--convert-to` exits `0` even when it converts nothing, so the only\ntrustworthy signal is whether a non-empty file of the expected type\nappeared on disk.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "damaged": {
+                "summary": "The conversion produced no file",
+                "value": {
+                  "error": {
+                    "code": "E_CONVERT_FAILED",
+                    "message": "This document could not be converted. It may be damaged or in a format the converter does not support."
+                  }
+                }
+              },
+              "internal": {
+                "summary": "Unanticipated server fault",
+                "value": {
+                  "error": {
+                    "code": "E_INTERNAL",
+                    "message": "Something went wrong on the server."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Busy": {
+        "description": "Every conversion slot is taken and the waiting queue is full. Returned\nimmediately rather than queueing without bound, so the client gets a\nfast, honest answer instead of a request that hangs until it times out.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_BUSY",
+                "message": "The converter is busy. Try again in a moment."
+              }
+            }
+          }
+        }
+      },
+      "Timeout": {
+        "description": "The conversion exceeded the server's 90 second deadline. The running\nLibreOffice process is sent `SIGTERM` and then `SIGKILL`.\n\nThis is deliberately shorter than the client's own 120 second abort, so\nthat the server answers with this response rather than being killed\nmid-conversion and leaving the phone to report a network failure.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "example": {
+              "error": {
+                "code": "E_TIMEOUT",
+                "message": "This document took too long to convert."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

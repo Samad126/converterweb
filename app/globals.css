@@ -1,0 +1,602 @@
+@import "tailwindcss";
+
+/*
+ * Strict black and white.
+ *
+ * This is not a palette, it is a constraint. There is no hue anywhere in this
+ * file and there cannot be one: the entire Tailwind colour namespace is cleared
+ * below, so `bg-red-500` is not a class that exists, and every colour in the
+ * app resolves through the tokens in `:root`. `tests/achromatic.test.ts`
+ * compiles this stylesheet and fails if a chromatic value ever appears in the
+ * output — which is how the rule survives the next person who wants a
+ * "success green".
+ *
+ * Hierarchy therefore has to come from somewhere else, and it does: type size
+ * and weight, the weight of a rule (1 px hairline against 2 px emphasis),
+ * whitespace, and inversion — a black block on white for a result, white on
+ * black for the primary action.
+ */
+
+@theme {
+  /*
+   * Remove every default colour. This is the rule, enforced at the compiler
+   * rather than at review time. The tokens below are plain custom properties
+   * rather than `@theme` values because they have to flip under
+   * `prefers-color-scheme`, and a `@theme` value is fixed at build time.
+   */
+  --color-*: initial;
+
+  /* The type scale: 12 / 14 / 16 / 20 / 28 / 40. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* Paper and ink. Everything else is a step between them. */
+  --ink: #000;
+  --paper: #fff;
+
+  --n-950: #0a0a0a;
+  --n-900: #171717;
+  --n-700: #404040;
+  --n-500: #737373;
+  --n-400: #a3a3a3;
+  --n-200: #e5e5e5;
+  --n-100: #f5f5f5;
+
+  /* Roles. Named for what they do, so a component never picks a ramp step. */
+  --muted: var(--n-500); /* 4.7:1 on paper in both themes — safe for body text */
+  --rule: var(--n-200); /* the hairline: separation without emphasis */
+  --rule-strong: var(--ink); /* 2 px: emphasis */
+  --surface: var(--n-100);
+  --surface-strong: var(--ink); /* the inverted block */
+  --on-surface-strong: var(--paper);
+  --focus: var(--ink);
+
+  /* One hairline lift. There is no second elevation in this design. */
+  --lift: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* Motion: 120–200 ms, ease-out, nothing else. */
+  --dur: 160ms;
+
+  /* The format grid and its skeleton share this, so loading the matrix does not
+     move the button underneath it. */
+  --picker-min-height: 21rem;
+}
+
+/* A straight inversion of the same tokens. Full contrast, no new colours. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #fff;
+    --paper: #000;
+
+    --n-950: #f5f5f5;
+    --n-900: #e5e5e5;
+    --n-700: #a3a3a3;
+    --n-500: #737373;
+    --n-400: #404040;
+    --n-200: #171717;
+    --n-100: #0a0a0a;
+
+    /* A black drop shadow on a black page is not a lift, it is a smudge. */
+    --lift: none;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  /*
+   * Focus is never removed and never subtle. `:focus-visible` only, so that a
+   * mouse click does not leave a ring behind, but every keyboard path does.
+   */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* Nothing here animates for decoration; when motion is unwelcome, none of it
+     runs, and every state that used motion still says what it means in text. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- panels */
+
+  .panel {
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+    padding: 20px;
+  }
+
+  /* The inverted block: a result the page wants you to look at. */
+  .panel-strong {
+    background-color: var(--surface-strong);
+    color: var(--on-surface-strong);
+    --focus: var(--on-surface-strong);
+    padding: 20px;
+  }
+
+  /* A second inversion inside the first: the success chip. Its whole job is to
+     read as "done" without using a colour to say so. */
+  .chip-inverse {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background-color: var(--on-surface-strong);
+    color: var(--surface-strong);
+  }
+
+  .hairline {
+    border: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* --------------------------------------------------------------- rhythm */
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .step-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .step-number {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .meta {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --------------------------------------------------------- drop zone */
+
+  .dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 152px;
+    padding: 20px;
+    text-align: center;
+    border: 1px dashed var(--n-500);
+    background-color: var(--paper);
+    cursor: pointer;
+    transition: border-color var(--dur) ease-out, background-color var(--dur) ease-out;
+  }
+
+  .dropzone:hover {
+    border-color: var(--ink);
+    background-color: var(--surface);
+  }
+
+  .dropzone[data-inert="true"] {
+    border-color: var(--n-400);
+    border-style: dotted;
+    cursor: not-allowed;
+  }
+
+  .dropzone[data-inert="true"]:hover {
+    background-color: var(--paper);
+    border-color: var(--n-400);
+  }
+
+  /* A solid rule and a tinted fill: the box knows a file is over it. */
+  .dropzone[data-dragging="true"] {
+    border-style: solid;
+    border-color: var(--ink);
+    background-color: var(--surface);
+  }
+
+  .dropzone:has(input:disabled) {
+    cursor: not-allowed;
+  }
+
+  /* The input is visually hidden but stays focusable; the ring is drawn on the
+     box so a keyboard user sees where they are. */
+  .dropzone:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .dropzone-title {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  /* The chosen file, once there is one. */
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--rule);
+  }
+
+  /* Base size only. The result state overrides it with a type-scale utility,
+     because the same name is a fact to read here and a headline to celebrate
+     there. */
+  .file-name {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+  }
+
+  /* ------------------------------------------------------------- picker */
+
+  /* Reserved in both the skeleton and the loaded state, so that learning the
+     matrix does not shove the button down the page. */
+  .picker-region {
+    min-height: var(--picker-min-height);
+  }
+
+  .picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .chip {
+    position: relative;
+    display: block;
+    padding: 10px 12px;
+    min-height: 56px;
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+    cursor: pointer;
+    transition: border-color var(--dur) ease-out, background-color var(--dur) ease-out;
+  }
+
+  .chip:hover {
+    border-color: var(--n-500);
+  }
+
+  .chip[data-selected="true"] {
+    /* 2 px of emphasis, with the padding pulled back so the box does not move. */
+    border: 2px solid var(--ink);
+    padding: 9px 11px;
+  }
+
+  .chip[data-disabled="true"] {
+    border-style: dashed;
+    cursor: not-allowed;
+  }
+
+  .chip[data-disabled="true"]:hover {
+    border-color: var(--rule);
+  }
+
+  .chip:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .chip-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .chip[data-selected="true"] .chip-title {
+    font-weight: 700;
+  }
+
+  .chip-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+
+  .chip-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: var(--ink);
+  }
+
+  .tag {
+    display: inline-block;
+    border: 1px solid var(--n-400);
+    padding: 0 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+  }
+
+  /* ------------------------------------------------------------ buttons */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 20px;
+    border: 2px solid var(--ink);
+    background-color: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--dur) ease-out, border-color var(--dur) ease-out;
+  }
+
+  .btn:hover:not(:disabled) {
+    background-color: var(--n-900);
+    border-color: var(--n-900);
+  }
+
+  .btn:active:not(:disabled) {
+    background-color: var(--n-950);
+    border-color: var(--n-950);
+  }
+
+  .btn:disabled {
+    background-color: var(--rule);
+    border-color: var(--rule);
+    /* 7.5:1 — a disabled control is still text someone has to read. */
+    color: var(--n-700);
+    cursor: not-allowed;
+  }
+
+  /* The same button, inverted, for use on the black result block. */
+  .btn-inverse {
+    border-color: var(--on-surface-strong);
+    background-color: var(--on-surface-strong);
+    color: var(--surface-strong);
+  }
+
+  .btn-inverse:hover:not(:disabled) {
+    background-color: var(--n-200);
+    border-color: var(--n-200);
+    color: var(--surface-strong);
+  }
+
+  .btn-inverse:active:not(:disabled) {
+    background-color: var(--n-400);
+    border-color: var(--n-400);
+  }
+
+  /*
+   * The single action during a conversion: available, obviously pressable, and
+   * deliberately quieter than the primary button so that it does not compete
+   * with the progress it sits under.
+   */
+  .btn-outline {
+    border: 2px solid var(--ink);
+    background-color: transparent;
+    color: var(--ink);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background-color: var(--surface);
+    border-color: var(--ink);
+  }
+
+  .btn-outline:active:not(:disabled) {
+    background-color: var(--rule);
+  }
+
+  .btn-quiet {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 6px 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    cursor: pointer;
+  }
+
+  .btn-quiet:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .btn-quiet:disabled {
+    color: var(--muted);
+    text-decoration-thickness: 1px;
+    cursor: not-allowed;
+  }
+
+  /* --------------------------------------------------------------- rules */
+
+  .progress {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .meter {
+    height: 4px;
+    background-color: var(--rule);
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    background-color: var(--ink);
+    transition: width var(--dur) ease-out;
+  }
+
+  /* The conversion phase has no measurable progress: the server is thinking. */
+  .meter-fill[data-indeterminate="true"] {
+    width: 35%;
+    animation: sweep 1200ms ease-out infinite;
+  }
+
+  @keyframes sweep {
+    from {
+      transform: translateX(-105%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
+
+  /* Meaning survives the loss of the animation: the bar is full, and the phase
+     is written out in words beside it. */
+  @media (prefers-reduced-motion: reduce) {
+    .meter-fill[data-indeterminate="true"] {
+      width: 100%;
+      opacity: 0.3;
+    }
+  }
+
+  /* --------------------------------------------------------------- error */
+
+  .error {
+    border-left: 2px solid var(--rule-strong);
+    padding: 2px 0 2px 16px;
+  }
+
+  .error-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .error-message {
+    margin-top: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .request-id {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .request-id code {
+    font-family: inherit;
+    overflow-wrap: anywhere;
+  }
+
+  .copied {
+    font-family: var(--font-ui);
+    font-weight: 700;
+  }
+
+  /* ------------------------------------------------------------- notice */
+
+  .notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--rule);
+    background-color: var(--surface);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* ------------------------------------------------------------ preview */
+
+  .preview-frame {
+    width: 100%;
+    height: 360px;
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+  }
+
+  /* ----------------------------------------------------------- skeleton */
+
+  .skeleton {
+    border: 1px solid var(--rule);
+    background-color: var(--surface);
+  }
+
+  /* Same box as the drop zone it stands in for. */
+  .skeleton-dropzone {
+    min-height: 152px;
+  }
+
+  .skeleton-chip {
+    min-height: 56px;
+    border: 1px solid var(--rule);
+    background-color: var(--surface);
+  }
+}
