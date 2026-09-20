@@ -56,13 +56,13 @@ export default function AboutPage(): React.ReactElement {
             <li>
               Frontend source:{" "}
               <a href={AUTHOR.githubFrontend} target="_blank" rel="noopener noreferrer">
-                github.com/Samad126/converterweb
+                GitHub
               </a>
             </li>
             <li>
               Backend source:{" "}
               <a href={AUTHOR.githubBackend} target="_blank" rel="noopener noreferrer">
-                github.com/Samad126/converterapi
+                GitHub
               </a>
             </li>
           </ul>
@@ -84,7 +84,7 @@ export default function AboutPage(): React.ReactElement {
           <li>
             LinkedIn:{" "}
             <a href={AUTHOR.linkedin} target="_blank" rel="noopener noreferrer">
-              linkedin.com/in/samad-alakbarov
+              LinkedIn
             </a>
           </li>
           <li>
