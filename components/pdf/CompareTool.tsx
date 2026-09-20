@@ -63,6 +63,7 @@ export function CompareTool(): React.ReactElement {
             limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
             disabled={phase.name === "running"}
             onSelect={(file) => tool.addFiles([file])}
+            multiple
           />
         ) : null}
       </section>

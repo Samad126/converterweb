@@ -110,6 +110,7 @@ export function PdfMultiToolShell({
           limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
           disabled={phase.name === "running"}
           onSelect={(file) => tool.addFiles([file])}
+          multiple
         />
       </section>
 
