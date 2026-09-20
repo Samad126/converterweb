@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ConversionFinder } from "@/components/ConversionFinder";
 import { JsonLd } from "@/components/JsonLd";
 import { ToolCard } from "@/components/ToolCard";
 import { CATALOG, entriesByFamily } from "@/lib/catalog";
@@ -57,6 +58,10 @@ export default function ConversionsPage(): React.ReactElement {
           you upload is kept.
         </p>
       </header>
+
+      <div className="mt-10">
+        <ConversionFinder />
+      </div>
 
       {families.map((group) => (
         <section key={group.family} className="mt-12">
