@@ -9,17 +9,20 @@ import { useState } from "react";
 
 import { DropZone } from "@/components/DropZone";
 import { ErrorNote } from "@/components/ErrorNote";
+import { HealthNote } from "@/components/HealthNote";
 import { CheckIcon, DownloadIcon } from "@/components/Icons";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { recoveryFor } from "@/lib/errors";
 import { formatBytes } from "@/lib/format";
 import { usePdfFormFieldsTool, type FormField } from "@/lib/usePdfFormFieldsTool";
+import { useServiceHealth } from "@/lib/useServiceHealth";
 
 export function FormFieldsTool(): React.ReactElement {
   const tool = usePdfFormFieldsTool();
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [flatten, setFlatten] = useState(false);
   const { phase } = tool;
+  const { health, healthFailure, recheckHealth } = useServiceHealth();
 
   if (phase.name === "done") {
     return (
@@ -46,110 +49,116 @@ export function FormFieldsTool(): React.ReactElement {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="step-heading">
-          <span className="step-number">1</span> Choose a PDF
-        </h2>
+    <>
+      {health === "unavailable" && healthFailure !== null ? (
+        <HealthNote failure={healthFailure} onRetry={recheckHealth} />
+      ) : null}
 
-        {tool.file ? (
-          <div className="chosen-file">
-            <span className="file-name">{tool.file.name}</span>
-            <span className="meta">{formatBytes(tool.file.size)}</span>
+      <div className="flex flex-col gap-8">
+        <section className="flex flex-col gap-3">
+          <h2 className="step-heading">
+            <span className="step-number">1</span> Choose a PDF
+          </h2>
+
+          {tool.file ? (
+            <div className="chosen-file">
+              <span className="file-name">{tool.file.name}</span>
+              <span className="meta">{formatBytes(tool.file.size)}</span>
+              <button
+                type="button"
+                className="btn-quiet"
+                onClick={tool.clearFile}
+                disabled={phase.name === "listing" || phase.name === "filling"}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <DropZone
+              id="pdf-form-fields-file"
+              accept=".pdf"
+              acceptedLabel=".pdf"
+              limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
+              disabled={false}
+              onSelect={tool.selectFile}
+            />
+          )}
+
+          {tool.fileError ? (
+            <ul className="flex flex-col gap-1" role="alert">
+              <li className="notice">{tool.fileError}</li>
+            </ul>
+          ) : null}
+        </section>
+
+        {tool.file && phase.name === "ready" ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="step-heading">
+              <span className="step-number">2</span> Read the form
+            </h2>
+            <button type="button" className="btn" onClick={tool.list} disabled={health !== "ready"}>
+              Read form fields
+            </button>
+          </section>
+        ) : null}
+
+        {phase.name === "listing" ? <p className="meta">Reading the form…</p> : null}
+
+        {phase.name === "listed" && phase.fields.length === 0 ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="step-heading">
+              <span className="step-number">2</span> Fields
+            </h2>
+            <p className="meta">This PDF has no fillable form fields.</p>
+          </section>
+        ) : null}
+
+        {phase.name === "listed" && phase.fields.length > 0 ? (
+          <section className="flex flex-col gap-4">
+            <h2 className="step-heading">
+              <span className="step-number">2</span> Fields
+            </h2>
+            {phase.fields.map((field) => (
+              <FieldInput
+                key={field.name}
+                field={field}
+                value={values[field.name]}
+                onChange={(next) => setValues((current) => ({ ...current, [field.name]: next }))}
+              />
+            ))}
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={flatten}
+                onChange={(event) => setFlatten(event.target.checked)}
+              />
+              <span>Flatten — bake the values in and remove the fields</span>
+            </label>
+
             <button
               type="button"
-              className="btn-quiet"
-              onClick={tool.clearFile}
-              disabled={phase.name === "listing" || phase.name === "filling"}
+              className="btn"
+              onClick={() => tool.fill(values, flatten)}
+              disabled={Object.keys(values).length === 0 || health !== "ready"}
             >
-              Remove
+              Fill form
             </button>
-          </div>
-        ) : (
-          <DropZone
-            id="pdf-form-fields-file"
-            accept=".pdf"
-            acceptedLabel=".pdf"
-            limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
-            disabled={false}
-            onSelect={tool.selectFile}
-          />
-        )}
-
-        {tool.fileError ? (
-          <ul className="flex flex-col gap-1" role="alert">
-            <li className="notice">{tool.fileError}</li>
-          </ul>
+          </section>
         ) : null}
-      </section>
 
-      {tool.file && phase.name === "ready" ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="step-heading">
-            <span className="step-number">2</span> Read the form
-          </h2>
-          <button type="button" className="btn" onClick={tool.list}>
-            Read form fields
-          </button>
-        </section>
-      ) : null}
+        {phase.name === "filling" ? <p className="meta">Filling the form…</p> : null}
 
-      {phase.name === "listing" ? <p className="meta">Reading the form…</p> : null}
-
-      {phase.name === "listed" && phase.fields.length === 0 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="step-heading">
-            <span className="step-number">2</span> Fields
-          </h2>
-          <p className="meta">This PDF has no fillable form fields.</p>
-        </section>
-      ) : null}
-
-      {phase.name === "listed" && phase.fields.length > 0 ? (
-        <section className="flex flex-col gap-4">
-          <h2 className="step-heading">
-            <span className="step-number">2</span> Fields
-          </h2>
-          {phase.fields.map((field) => (
-            <FieldInput
-              key={field.name}
-              field={field}
-              value={values[field.name]}
-              onChange={(next) => setValues((current) => ({ ...current, [field.name]: next }))}
-            />
-          ))}
-
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={flatten}
-              onChange={(event) => setFlatten(event.target.checked)}
-            />
-            <span>Flatten — bake the values in and remove the fields</span>
-          </label>
-
-          <button
-            type="button"
-            className="btn"
-            onClick={() => tool.fill(values, flatten)}
-            disabled={Object.keys(values).length === 0}
-          >
-            Fill form
-          </button>
-        </section>
-      ) : null}
-
-      {phase.name === "filling" ? <p className="meta">Filling the form…</p> : null}
-
-      {phase.name === "failed" ? (
-        <ErrorNote
-          failure={phase.failure}
-          recovery={recoveryFor(phase.failure)}
-          cooldownRemainingMs={0}
-          onAction={tool.reset}
-        />
-      ) : null}
-    </div>
+        {phase.name === "failed" ? (
+          <ErrorNote
+            failure={phase.failure}
+            recovery={recoveryFor(phase.failure)}
+            cooldownRemainingMs={0}
+            onAction={tool.reset}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }
 

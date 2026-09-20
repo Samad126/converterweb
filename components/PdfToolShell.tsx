@@ -13,11 +13,13 @@
  */
 import { DropZone } from "@/components/DropZone";
 import { ErrorNote } from "@/components/ErrorNote";
+import { HealthNote } from "@/components/HealthNote";
 import { CheckIcon, DownloadIcon } from "@/components/Icons";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { recoveryFor } from "@/lib/errors";
 import { formatBytes, formatDuration } from "@/lib/format";
 import type { PdfFileTool } from "@/lib/usePdfFileTool";
+import { useServiceHealth } from "@/lib/useServiceHealth";
 
 export interface PdfToolShellProps {
   tool: PdfFileTool;
@@ -29,6 +31,7 @@ export interface PdfToolShellProps {
 
 export function PdfToolShell({ tool, children, onRun }: PdfToolShellProps): React.ReactElement {
   const { phase } = tool;
+  const { health, healthFailure, recheckHealth } = useServiceHealth();
 
   if (phase.name === "done") {
     return (
@@ -55,78 +58,94 @@ export function PdfToolShell({ tool, children, onRun }: PdfToolShellProps): Reac
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="step-heading">
-          <span className="step-number">1</span> Choose a PDF
-        </h2>
+    <>
+      {health === "unavailable" && healthFailure !== null ? (
+        <HealthNote failure={healthFailure} onRetry={recheckHealth} />
+      ) : null}
 
-        {tool.file ? (
-          <div className="chosen-file">
-            <span className="file-name">{tool.file.name}</span>
-            <span className="meta">{formatBytes(tool.file.size)}</span>
-            <button type="button" className="btn-quiet" onClick={tool.clearFile} disabled={phase.name === "running"}>
-              Remove
-            </button>
-          </div>
-        ) : (
-          <DropZone
-            id="pdf-tool-file"
-            accept=".pdf"
-            acceptedLabel=".pdf"
-            limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
-            disabled={phase.name === "running"}
-            onSelect={tool.selectFile}
-          />
-        )}
-
-        {tool.fileError ? (
-          <ul className="flex flex-col gap-1" role="alert">
-            <li className="notice">{tool.fileError}</li>
-          </ul>
-        ) : null}
-      </section>
-
-      {tool.file && children ? (
+      <div className="flex flex-col gap-8">
         <section className="flex flex-col gap-3">
           <h2 className="step-heading">
-            <span className="step-number">2</span> Options
+            <span className="step-number">1</span> Choose a PDF
           </h2>
-          {children}
+
+          {tool.file ? (
+            <div className="chosen-file">
+              <span className="file-name">{tool.file.name}</span>
+              <span className="meta">{formatBytes(tool.file.size)}</span>
+              <button
+                type="button"
+                className="btn-quiet"
+                onClick={tool.clearFile}
+                disabled={phase.name === "running"}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <DropZone
+              id="pdf-tool-file"
+              accept=".pdf"
+              acceptedLabel=".pdf"
+              limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
+              disabled={phase.name === "running"}
+              onSelect={tool.selectFile}
+            />
+          )}
+
+          {tool.fileError ? (
+            <ul className="flex flex-col gap-1" role="alert">
+              <li className="notice">{tool.fileError}</li>
+            </ul>
+          ) : null}
         </section>
-      ) : null}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="step-heading">
-          <span className="step-number">{children ? 3 : 2}</span> Run
-        </h2>
-
-        <button type="button" className="btn" onClick={onRun} disabled={!tool.canRun}>
-          {phase.name === "running"
-            ? phase.stage === "uploading"
-              ? "Uploading…"
-              : "Working…"
-            : "Run"}
-        </button>
-
-        {phase.name === "running" ? (
-          <p className="meta" role="status" aria-live="polite">
-            {formatDuration(tool.elapsedMs)} elapsed
-            <button type="button" className="btn-quiet ml-3" onClick={tool.cancel}>
-              Cancel
-            </button>
-          </p>
+        {tool.file && children ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="step-heading">
+              <span className="step-number">2</span> Options
+            </h2>
+            {children}
+          </section>
         ) : null}
-      </section>
 
-      {phase.name === "failed" ? (
-        <ErrorNote
-          failure={phase.failure}
-          recovery={recoveryFor(phase.failure)}
-          cooldownRemainingMs={0}
-          onAction={tool.reset}
-        />
-      ) : null}
-    </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="step-heading">
+            <span className="step-number">{children ? 3 : 2}</span> Run
+          </h2>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={onRun}
+            disabled={!tool.canRun || health !== "ready"}
+          >
+            {phase.name === "running"
+              ? phase.stage === "uploading"
+                ? "Uploading…"
+                : "Working…"
+              : "Run"}
+          </button>
+
+          {phase.name === "running" ? (
+            <p className="meta" role="status" aria-live="polite">
+              {formatDuration(tool.elapsedMs)} elapsed
+              <button type="button" className="btn-quiet ml-3" onClick={tool.cancel}>
+                Cancel
+              </button>
+            </p>
+          ) : null}
+        </section>
+
+        {phase.name === "failed" ? (
+          <ErrorNote
+            failure={phase.failure}
+            recovery={recoveryFor(phase.failure)}
+            cooldownRemainingMs={0}
+            onAction={tool.reset}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }

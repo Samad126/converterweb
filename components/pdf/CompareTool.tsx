@@ -6,14 +6,17 @@
  */
 import { DropZone } from "@/components/DropZone";
 import { ErrorNote } from "@/components/ErrorNote";
+import { HealthNote } from "@/components/HealthNote";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { recoveryFor } from "@/lib/errors";
 import { formatBytes } from "@/lib/format";
 import { usePdfCompareTool, type CompareDiffChunk } from "@/lib/usePdfCompareTool";
+import { useServiceHealth } from "@/lib/useServiceHealth";
 
 export function CompareTool(): React.ReactElement {
   const tool = usePdfCompareTool();
   const { phase } = tool;
+  const { health, healthFailure, recheckHealth } = useServiceHealth();
 
   if (phase.name === "done") {
     return (
@@ -27,75 +30,81 @@ export function CompareTool(): React.ReactElement {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="step-heading">
-          <span className="step-number">1</span> Choose two PDFs
-        </h2>
-        <p className="meta">Exactly two files — the first is &ldquo;A&rdquo;, the second &ldquo;B&rdquo;.</p>
+    <>
+      {health === "unavailable" && healthFailure !== null ? (
+        <HealthNote failure={healthFailure} onRetry={recheckHealth} />
+      ) : null}
 
-        {tool.files.length > 0 ? (
-          <ol className="flex flex-col gap-2">
-            {tool.files.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="chosen-file">
-                <span className="file-name">
-                  {index === 0 ? "A" : "B"}. {file.name}
-                </span>
-                <span className="meta">{formatBytes(file.size)}</span>
-                <button
-                  type="button"
-                  className="btn-quiet"
-                  onClick={() => tool.removeFile(index)}
-                  disabled={phase.name === "running"}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ol>
-        ) : null}
+      <div className="flex flex-col gap-8">
+        <section className="flex flex-col gap-3">
+          <h2 className="step-heading">
+            <span className="step-number">1</span> Choose two PDFs
+          </h2>
+          <p className="meta">Exactly two files — the first is &ldquo;A&rdquo;, the second &ldquo;B&rdquo;.</p>
 
-        {tool.fileErrors.length > 0 ? (
-          <ul className="flex flex-col gap-1" role="alert">
-            {tool.fileErrors.map((message, index) => (
-              <li key={index} className="notice">
-                {message}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+          {tool.files.length > 0 ? (
+            <ol className="flex flex-col gap-2">
+              {tool.files.map((file, index) => (
+                <li key={`${file.name}-${index}`} className="chosen-file">
+                  <span className="file-name">
+                    {index === 0 ? "A" : "B"}. {file.name}
+                  </span>
+                  <span className="meta">{formatBytes(file.size)}</span>
+                  <button
+                    type="button"
+                    className="btn-quiet"
+                    onClick={() => tool.removeFile(index)}
+                    disabled={phase.name === "running"}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : null}
 
-        {tool.files.length < 2 ? (
-          <DropZone
-            id="pdf-compare-file"
-            accept=".pdf"
-            acceptedLabel=".pdf"
-            limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
-            disabled={phase.name === "running"}
-            onSelect={(file) => tool.addFiles([file])}
-            multiple
+          {tool.fileErrors.length > 0 ? (
+            <ul className="flex flex-col gap-1" role="alert">
+              {tool.fileErrors.map((message, index) => (
+                <li key={index} className="notice">
+                  {message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {tool.files.length < 2 ? (
+            <DropZone
+              id="pdf-compare-file"
+              accept=".pdf"
+              acceptedLabel=".pdf"
+              limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
+              disabled={phase.name === "running"}
+              onSelect={(file) => tool.addFiles([file])}
+              multiple
+            />
+          ) : null}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="step-heading">
+            <span className="step-number">2</span> Run
+          </h2>
+          <button type="button" className="btn" onClick={tool.run} disabled={!tool.canRun || health !== "ready"}>
+            {phase.name === "running" ? "Comparing…" : "Compare"}
+          </button>
+        </section>
+
+        {phase.name === "failed" ? (
+          <ErrorNote
+            failure={phase.failure}
+            recovery={recoveryFor(phase.failure)}
+            cooldownRemainingMs={0}
+            onAction={tool.reset}
           />
         ) : null}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="step-heading">
-          <span className="step-number">2</span> Run
-        </h2>
-        <button type="button" className="btn" onClick={tool.run} disabled={!tool.canRun}>
-          {phase.name === "running" ? "Comparing…" : "Compare"}
-        </button>
-      </section>
-
-      {phase.name === "failed" ? (
-        <ErrorNote
-          failure={phase.failure}
-          recovery={recoveryFor(phase.failure)}
-          cooldownRemainingMs={0}
-          onAction={tool.reset}
-        />
-      ) : null}
-    </div>
+      </div>
+    </>
   );
 }
 
