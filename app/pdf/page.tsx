@@ -43,6 +43,24 @@ export default function PdfToolsIndexPage(): React.ReactElement {
           </ul>
         </section>
       ) : null}
+
+      <section className="mt-10 flex flex-col gap-4">
+        <h2 className="section-title">Extraction tools</h2>
+        <p className="body-text">
+          Two more one-off tools that pull specific content out of a file rather than converting
+          the whole thing.
+        </p>
+        <section className="tool-grid">
+          <Link href="/tools/psd-to-layers" className="tool-card">
+            <span className="tool-card-title">PSD to layers</span>
+            <span className="tool-card-blurb">Every layer of a Photoshop file as its own PNG.</span>
+          </Link>
+          <Link href="/tools/extract-tables" className="tool-card">
+            <span className="tool-card-title">Extract tables</span>
+            <span className="tool-card-blurb">Just a Word document&rsquo;s tables, as an Excel workbook.</span>
+          </Link>
+        </section>
+      </section>
     </main>
   );
 }

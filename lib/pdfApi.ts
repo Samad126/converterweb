@@ -63,6 +63,15 @@ export function postPdfTool(
   parts: readonly PdfPart[],
   expect: "pdf" | "json",
   callbacks: PdfCallbacks = {},
+  /**
+   * The exact `Content-Type` a `200` must carry when `expect` is `"pdf"`.
+   *
+   * Named for the common case — every tool but `/pdf/split` answers with
+   * `application/pdf` — but `/pdf/split` always answers with `application/zip`
+   * (an archive of parts, even for a single part), so this is a parameter
+   * rather than a literal.
+   */
+  expectedMediaType = "application/pdf",
 ): PdfHandle {
   const xhr = new XMLHttpRequest();
   let settled = false;
@@ -121,7 +130,7 @@ export function postPdfTool(
 
       if (status >= 200 && status < 300) {
         if (expect === "pdf") {
-          if (contentType !== "application/pdf") {
+          if (contentType !== expectedMediaType) {
             reject(new ConversionFailed(unreadableResponseFailure(status, requestId)));
             return;
           }

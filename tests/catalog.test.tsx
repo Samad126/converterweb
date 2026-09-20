@@ -44,6 +44,13 @@ const targetIds = new Set<string>(
 /** Every extension the service accepts, in its order. */
 const acceptedExtensions = MATRIX.sources.map((source) => source.extension);
 
+/**
+ * Targets that are one-off extraction tools rather than catalog pages — see
+ * the note in `lib/catalog.ts` and `app/tools/*`. Never grown for anything
+ * other than those two.
+ */
+const STANDALONE_EXTRACTION_TARGETS = new Set<TargetId>(["tables", "layers"]);
+
 describe("the catalog's shape", () => {
   it("has a page for every pair, and is not empty", () => {
     // A sanity check on the arithmetic elsewhere in this file: if the catalog
@@ -115,10 +122,18 @@ describe("the catalog against the matrix", () => {
     // Grouping is the whole point of the URL scheme: if `.doc` and `.docx` could
     // reach different targets, `word_to_pdf` would be promising something one of
     // its own extensions cannot do.
+    //
+    // `STANDALONE_EXTRACTION_TARGETS` is filtered out first: `.docx`/`.docm` can
+    // also reach `tables`, `.doc` cannot, and that is a real difference between
+    // them — but it is irrelevant to the catalog's grouping, since `tables` is a
+    // standalone tool (`app/tools/extract-tables`) and never a catalog target.
     for (const group of SOURCES) {
       const targetSets = group.extensions.map((extension) => {
         const source = sourceByExtension.get(extension);
-        return [...(source?.targets ?? [])].sort().join(",");
+        return [...(source?.targets ?? [])]
+          .filter((target) => !STANDALONE_EXTRACTION_TARGETS.has(target))
+          .sort()
+          .join(",");
       });
       const distinct = new Set(targetSets);
       expect(
@@ -142,9 +157,18 @@ describe("the catalog against the matrix", () => {
   it("has a page for every conversion the service supports", () => {
     // The direction that matters most. Without this, adding a format to the
     // service would quietly leave its pages missing until somebody noticed.
+    //
+    // `STANDALONE_EXTRACTION_TARGETS` is the one deliberate exception: `tables`
+    // (from the Word group) and `layers` (from `.psd`, which has no `SOURCES`
+    // group at all) are one-off extraction tools, not a 37th/38th catalog page —
+    // see `app/tools/extract-tables` and `app/tools/psd-to-layers`. Excluding
+    // them here is what keeps this test honest about that product decision
+    // instead of silently demanding pages for them.
     const expected = SOURCES.flatMap((group) => {
       const first = sourceByExtension.get(group.extensions[0] ?? "");
-      return (first?.targets ?? []).map((target) => slugFor(group.key, target));
+      return (first?.targets ?? [])
+        .filter((target) => !STANDALONE_EXTRACTION_TARGETS.has(target))
+        .map((target) => slugFor(group.key, target));
     });
 
     expect([...expected].sort()).toEqual([...SLUGS].sort());
@@ -247,7 +271,7 @@ describe("the catalog's helper functions", () => {
 describe("the fixture this file trusts", () => {
   it("still describes a service with many sources and targets", () => {
     expect(MATRIX.sources.length).toBeGreaterThanOrEqual(16);
-    expect(MATRIX.targets.length).toBe(14);
+    expect(MATRIX.targets.length).toBe(16);
   });
 
   it("still says PDF is an output and not an input", () => {

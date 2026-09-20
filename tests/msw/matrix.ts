@@ -107,6 +107,20 @@ export const MATRIX: FormatsResponse = {
         "mediaType": "image/jpeg",
         "label": "JPG",
         "multiple": true
+      },
+      {
+        "id": "tables",
+        "extension": ".xlsx",
+        "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "label": "Tables",
+        "multiple": false
+      },
+      {
+        "id": "layers",
+        "extension": ".png",
+        "mediaType": "application/zip",
+        "label": "Layers",
+        "multiple": true
       }
     ],
     "sources": [
@@ -120,7 +134,8 @@ export const MATRIX: FormatsResponse = {
           "txt",
           "html",
           "rtf",
-          "epub"
+          "epub",
+          "tables"
         ]
       },
       {
@@ -133,7 +148,8 @@ export const MATRIX: FormatsResponse = {
           "txt",
           "html",
           "rtf",
-          "epub"
+          "epub",
+          "tables"
         ]
       },
       {
@@ -272,6 +288,14 @@ export const MATRIX: FormatsResponse = {
         "family": "draw",
         "targets": [
           "pdf"
+        ]
+      },
+      {
+        "extension": ".psd",
+        "mediaType": "image/vnd.adobe.photoshop",
+        "family": null,
+        "targets": [
+          "layers"
         ]
       }
     ]

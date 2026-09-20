@@ -1,70 +1,70 @@
 "use client";
 
 /**
- * The state machine shared by the simplest `/pdf/*` tools: one PDF in, plus a
- * handful of scalar fields, and a PDF back out.
+ * `usePdfFileTool`'s sibling for the two `/pdf/*` tools that take several
+ * files under one repeated field name — `merge` (two or more PDFs) and
+ * `scan-to-pdf` (one or more images) — rather than the single `file` every
+ * other tool takes.
  *
- * This is `lib/useConverter.ts`'s smaller sibling. It is not that hook made
- * generic — there is no matrix to fetch and no target to pick, so the shape is
- * simpler on purpose — but it borrows the same three disciplines: the object
- * URL is created once and revoked on unmount/reset/before the next run, a
- * failure is a normal event and never retried on its own, and the server's
- * sentence is shown verbatim.
- *
- * Tools whose response is JSON rather than a PDF (`compare`, `form-fields`)
- * do not use this hook — their shape differs enough (no single download) that
- * forcing them through it would cost more than it saves. They call
- * `postPdfTool` directly.
+ * The order the files are chosen in is significant for both tools (the pages
+ * come out in upload order), so this keeps an ordered list rather than a set,
+ * with `moveFile` to reorder it and `removeFile` to drop one.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ConversionFailed } from "./api";
-import { type PdfPart, postPdfTool, type PdfHandle } from "./pdfApi";
 import { buildDownloadName } from "./contentDisposition";
 import { type Failure, cancelledFailure, networkFailure } from "./errors";
+import { type PdfPart, postPdfTool, type PdfHandle } from "./pdfApi";
 
-export type PdfToolPhase =
+export type PdfMultiToolPhase =
   | { name: "ready" }
   | { name: "running"; stage: "uploading" | "processing"; loaded: number; total: number | null }
-  | { name: "done"; result: PdfToolResult }
+  | { name: "done"; result: PdfMultiToolResult }
   | { name: "failed"; failure: Failure };
 
-export interface PdfToolResult {
+export interface PdfMultiToolResult {
   filename: string;
   byteSize: number;
   downloadUrl: string;
   blob: Blob;
 }
 
-export interface PdfFileTool {
-  file: File | null;
-  phase: PdfToolPhase;
+export interface PdfMultiFileTool {
+  files: readonly File[];
+  phase: PdfMultiToolPhase;
   elapsedMs: number;
   canRun: boolean;
-  selectFile: (file: File) => void;
-  clearFile: () => void;
-  /** Builds the extra multipart fields at the moment of submission. */
+  addFiles: (files: readonly File[]) => void;
+  removeFile: (index: number) => void;
+  moveFile: (index: number, direction: -1 | 1) => void;
   run: (extraParts?: readonly PdfPart[]) => void;
   cancel: () => void;
   reset: () => void;
 }
 
-export interface PdfFileToolOptions {
-  /**
-   * The `Content-Type` and extension of a successful response.
-   *
-   * Every tool but `/pdf/split` answers with a PDF; `/pdf/split` always
-   * answers with a ZIP of parts, even for a single part. Defaults to the
-   * common case.
-   */
+export interface PdfMultiFileToolOptions {
+  /** The multipart field name every file is sent under. Defaults to `files`. */
+  fieldName?: string;
+  /** How many files `run` needs before it will fire. Defaults to `1`. */
+  minFiles?: number;
   responseMediaType?: string;
   downloadExtension?: string;
 }
 
-export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): PdfFileTool {
-  const { responseMediaType = "application/pdf", downloadExtension = ".pdf" } = options;
-  const [file, setFile] = useState<File | null>(null);
-  const [phase, setPhase] = useState<PdfToolPhase>({ name: "ready" });
+export function usePdfMultiFileTool(
+  path: string,
+  options: PdfMultiFileToolOptions = {},
+): PdfMultiFileTool {
+  const {
+    fieldName = "files",
+    minFiles = 1,
+    responseMediaType = "application/pdf",
+    downloadExtension = ".pdf",
+  } = options;
+
+  const [files, setFiles] = useState<readonly File[]>([]);
+  const [phase, setPhase] = useState<PdfMultiToolPhase>({ name: "ready" });
   const [elapsedMs, setElapsedMs] = useState(0);
 
   const handleRef = useRef<PdfHandle | null>(null);
@@ -94,28 +94,48 @@ export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): 
     downloadUrlRef.current = null;
   }, []);
 
-  const selectFile = useCallback((next: File): void => {
-    revokeDownloadUrl();
-    setFile(next);
-    setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  const addFiles = useCallback(
+    (next: readonly File[]): void => {
+      if (next.length === 0) return;
+      revokeDownloadUrl();
+      setPhase({ name: "ready" });
+      setFiles((current) => [...current, ...next]);
+    },
+    [revokeDownloadUrl],
+  );
 
-  const clearFile = useCallback((): void => {
-    revokeDownloadUrl();
-    setFile(null);
-    setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  const removeFile = useCallback(
+    (index: number): void => {
+      revokeDownloadUrl();
+      setPhase({ name: "ready" });
+      setFiles((current) => current.filter((_, i) => i !== index));
+    },
+    [revokeDownloadUrl],
+  );
+
+  const moveFile = useCallback((index: number, direction: -1 | 1): void => {
+    setFiles((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      if (moved === undefined) return current;
+      next.splice(target, 0, moved);
+      return next;
+    });
+  }, []);
 
   const run = useCallback(
     (extraParts: readonly PdfPart[] = []): void => {
-      if (!file) return;
+      if (files.length < minFiles) return;
       revokeDownloadUrl();
       setElapsedMs(0);
       startedAtRef.current = Date.now();
-      setPhase({ name: "running", stage: "uploading", loaded: 0, total: file.size });
+      const total = files.reduce((sum, file) => sum + file.size, 0);
+      setPhase({ name: "running", stage: "uploading", loaded: 0, total });
 
       const parts: PdfPart[] = [
-        { name: "file", value: file, filename: file.name },
+        ...files.map((file): PdfPart => ({ name: fieldName, value: file, filename: file.name })),
         ...extraParts,
       ];
 
@@ -171,7 +191,7 @@ export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): 
           setPhase({ name: "failed", failure });
         });
     },
-    [file, path, revokeDownloadUrl, responseMediaType, downloadExtension],
+    [files, path, fieldName, minFiles, revokeDownloadUrl, responseMediaType, downloadExtension],
   );
 
   const cancel = useCallback((): void => {
@@ -183,17 +203,18 @@ export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): 
     handleRef.current = null;
     revokeDownloadUrl();
     setElapsedMs(0);
-    setFile(null);
+    setFiles([]);
     setPhase({ name: "ready" });
   }, [revokeDownloadUrl]);
 
   return {
-    file,
+    files,
     phase,
     elapsedMs,
-    canRun: file !== null && phase.name === "ready",
-    selectFile,
-    clearFile,
+    canRun: files.length >= minFiles && phase.name === "ready",
+    addFiles,
+    removeFile,
+    moveFile,
     run,
     cancel,
     reset,

@@ -250,7 +250,24 @@ describe("no hard-coded matrix", () => {
    *     shows a disabled format and the server's own reason rather than a
    *     button that fails.
    */
-  const EDITORIAL = "lib/catalog.ts";
+  /**
+   * `lib/catalog.ts` composes the prose for the thirty-six catalog pages, and
+   * these two pages are its standalone cousins: `/tools/psd-to-layers` and
+   * `/tools/extract-tables` are one-off extraction tools that deliberately do
+   * not go through the catalog (see the note there), but they still have to
+   * say, in static HTML, which extensions they take — the same crawler-facing
+   * reason `lib/catalog.ts` is exempted for.
+   */
+  const EDITORIAL = new Set([
+    "lib/catalog.ts",
+    "app/tools/psd-to-layers/page.tsx",
+    "app/tools/extract-tables/page.tsx",
+    // `/pdf/scan-to-pdf` takes images, not a conversion-matrix source: its
+    // accepted extensions (`lib/pdfApi.ts`'s toolkit has no `GET /formats`
+    // equivalent — see the note there) are fixed by the service's own
+    // `/pdf/scan-to-pdf` contract, not by the matrix this test guards.
+    "components/pdf/ScanToPdfTool.tsx",
+  ]);
 
   function sourceFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -263,7 +280,7 @@ describe("no hard-coded matrix", () => {
   it("names no accepted file extension anywhere outside the generated types", () => {
     const files = APP_DIRECTORIES.flatMap(sourceFiles).filter((file) => {
       const relativePath = relative(process.cwd(), file);
-      return relativePath !== GENERATED && relativePath !== EDITORIAL;
+      return relativePath !== GENERATED && !EDITORIAL.has(relativePath);
     });
     expect(files.length).toBeGreaterThan(10);
 
