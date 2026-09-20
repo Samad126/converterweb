@@ -231,6 +231,41 @@ export const TARGETS: Readonly<Record<TargetId, TargetNote>> = {
     caveat:
       "There is no single-image output, and that is deliberate — a ZIP is what comes back even for a one-page source, so the response never changes shape depending on how many pages your file happened to have. JPEG is lossy and much lighter than PNG, which suits photographs more than fine text.",
   },
+  tables: {
+    label: "XLSX (tables)",
+    badge: "XLSX",
+    promise:
+      "an Excel workbook holding only the tables the source document contains, one sheet per table, with none of the surrounding prose",
+    metaNote: "An Excel workbook of just the document's tables.",
+    caveat:
+      "This is not a full document export: paragraphs, headings and images outside a table are dropped on purpose, so the workbook stays a workbook rather than a document wearing a spreadsheet's extension. A source with no tables at all produces an empty workbook rather than an error.",
+  },
+  layers: {
+    label: "PNG (layers)",
+    badge: "PNG",
+    promise:
+      "a ZIP archive holding one PNG per layer of the source file, at the path its group gives it, plus a manifest describing every layer",
+    metaNote: "A ZIP of one PNG per layer, with a manifest.",
+    caveat:
+      "A layer that produces no image of its own — an empty group, an adjustment layer, anything with nothing to rasterise — is still named in the manifest, along with why it has no file, rather than silently missing from the archive.",
+  },
+  pdfa: {
+    label: "PDF/A",
+    badge: "PDF/A",
+    promise:
+      "a PDF/A file: the archival variant of PDF, with fonts embedded and anything that depends on an external resource or a live connection disallowed",
+    metaNote: "An archival PDF/A, built for long-term storage.",
+    caveat:
+      "PDF/A trades a little flexibility for the guarantee that the file still opens correctly in decades: no encryption, no embedded audio or video, no JavaScript. A document leaning on any of those is flattened or stripped rather than failed outright.",
+  },
+  markdown: {
+    label: "Markdown",
+    badge: "MD",
+    promise: "a Markdown file using GitHub-flavoured syntax for headings, lists, tables and emphasis",
+    metaNote: "GitHub-flavoured Markdown.",
+    caveat:
+      "Markdown has no notion of fonts, colour or precise layout, so only structure survives — headings, lists, tables, links and basic emphasis. Images are referenced, not embedded, since Markdown has no way to carry binary data inline.",
+  },
 };
 
 /**
@@ -260,6 +295,10 @@ const CARD_LEADS: Readonly<Record<TargetId, string>> = {
   pptx: "Editable in PowerPoint",
   png: "One lossless PNG per page, in a ZIP",
   jpg: "One JPEG per page, in a ZIP",
+  tables: "Just the tables, as sheets in a workbook",
+  layers: "One PNG per layer, in a ZIP with a manifest",
+  pdfa: "An archival PDF built to still open in decades",
+  markdown: "Structure only, as GitHub-flavoured Markdown",
 };
 
 /**

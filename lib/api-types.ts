@@ -14,12 +14,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Convert a file to a named format
-         * @description Converts the upload to `target`, which must be an id from
+         * Convert one or more files to a named format
+         * @description Converts every uploaded file to `target`, which must be an id from
          *     `GET /formats` (`pdf`, `odt`, `docx`, `txt`, `html`, `rtf`, `epub`,
-         *     `ods`, `xlsx`, `csv`, `odp`, `pptx`, `png`, `jpg`).
+         *     `ods`, `xlsx`, `csv`, `odp`, `pptx`, `png`, `jpg`, `tables`, `layers`,
+         *     `pdfa`), independently of one another - a file that cannot reach
+         *     `target` (wrong extension, damaged document) does not stop the rest
+         *     of the batch when more than one file was uploaded. With exactly one
+         *     file, that failure IS the response, exactly as it always was.
          *
-         *     The document is parsed by LibreOffice, which is a large C++ codebase
+         *     Each document is parsed by LibreOffice, which is a large C++ codebase
          *     handling untrusted input. **Treat a conversion failure as an expected,
          *     normal event**, not as an incident.
          *
@@ -28,8 +32,651 @@ export interface paths {
          *     rate-limited per IP and conversions run under a bounded concurrency
          *     limit; both are sources of `429` and `503` that a well-formed request
          *     can hit.
+         *
+         *     A PDF with no extractable text at all (a scan), or one built on
+         *     Type3 fonts, asking for `docx` is OCR'd before reconstruction by
+         *     default - see the `ocr` field on the request body.
          */
         post: operations["convertToFormat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge two or more PDFs into one
+         * @description Concatenates every page of every uploaded PDF into one PDF, in the
+         *     order the files were uploaded. Each file contributes all of its own
+         *     pages, in its own order - there is no separate page-selection step
+         *     here, only file order.
+         */
+        post: operations["mergePdfs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Split a PDF into several PDFs
+         * @description Cuts one PDF into consecutive chunks of `every` pages each, answered
+         *     as a ZIP of `part-1.pdf`, `part-2.pdf`, ... - always an archive, even
+         *     when the result is a single part, so the response shape never depends
+         *     on how the split happened to come out.
+         */
+        post: operations["splitPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/remove-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove pages from a PDF
+         * @description Answers with the PDF minus the named pages, everything else kept in
+         *     its original order. Removing every page is refused with `400` rather
+         *     than answering with an empty PDF nobody could open.
+         */
+        post: operations["removePdfPages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/extract-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract a subset of a PDF's pages
+         * @description Answers with a PDF holding only the named pages, in the exact order
+         *     they were named - `pages=3,1` extracts pages 1 and 3 and puts page 3
+         *     first, so this can reorder as well as select.
+         */
+        post: operations["extractPdfPages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/organize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reorder a PDF's pages
+         * @description Answers with the PDF's pages rearranged into `order`, which must name
+         *     every page exactly once - unlike `/pdf/extract-pages`, this refuses a
+         *     selection that would drop or duplicate a page, because reordering and
+         *     removing are different operations here.
+         */
+        post: operations["organizePdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/scan-to-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build a PDF from a set of images
+         * @description Answers with one PDF holding one page per uploaded image, in upload
+         *     order. Each page is sized to its own image's pixel dimensions, so a
+         *     portrait photo and a landscape photo in the same request each get a
+         *     correctly-shaped page rather than being forced into one fixed size.
+         */
+        post: operations["scanToPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate a PDF's pages
+         * @description Rotates the named pages (or every page, if `pages` is omitted) by
+         *     `degrees` clockwise, added to whatever rotation each page already
+         *     carries rather than replacing it.
+         */
+        post: operations["rotatePdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/watermark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stamp text across a PDF's pages
+         * @description Draws `text` across the named pages (or every page, if `pages` is
+         *     omitted), semi-transparent, sized to each page's own dimensions. The
+         *     original page content is untouched underneath it.
+         */
+        post: operations["watermarkPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/protect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a password to a PDF
+         * @description Encrypts the PDF with `password` as both its user and owner password.
+         *     Refuses a file that is already encrypted with `422` - re-protecting an
+         *     already-protected file is not a coherent request; unlock it first.
+         */
+        post: operations["protectPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove a PDF's password
+         * @description Decrypts the PDF using `password`. A password that does not open the
+         *     file is refused with `422 E_WRONG_PASSWORD`, distinct from the
+         *     `E_ENCRYPTED` every other page endpoint gives an encrypted input -
+         *     this endpoint's whole purpose is to accept one.
+         */
+        post: operations["unlockPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/crop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crop a PDF's pages
+         * @description Shrinks the named pages (or every page, if `pages` is omitted) by
+         *     trimming `left`/`right`/`top`/`bottom` points off each edge - each
+         *     defaults to `0`. This shrinks the crop box, not the page content: the
+         *     trimmed area still exists in the file, only outside what a viewer or
+         *     printer shows.
+         */
+        post: operations["cropPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/page-numbers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draw page numbers on a PDF
+         * @description Draws a number on every page, starting from `startAt` (default `1`)
+         *     and counting up one per page in document order - there is no partial
+         *     mode, since a page number that disagrees with its own position would
+         *     be worse than no page number at all.
+         */
+        post: operations["addPageNumbers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/repair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Repair a damaged PDF
+         * @description Reads the PDF and rewrites it, fixing whatever the reader can
+         *     recover from - a broken cross-reference table, a truncated update, a
+         *     damaged linearization hint stream. Refuses an encrypted file, the
+         *     same as every other page endpoint: there is no password field here.
+         */
+        post: operations["repairPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/compress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recompress a PDF to shrink it
+         * @description Recompresses the PDF's own streams, objects and images with qpdf -
+         *     the same engine `/pdf/protect`, `/pdf/unlock` and `/pdf/repair` use,
+         *     rather than adding Ghostscript or another engine for one more
+         *     endpoint. Refuses an encrypted file, the same as every other page
+         *     endpoint: qpdf needs the file unlocked to rewrite it at all.
+         *
+         *     `level` (default `medium`) controls how aggressively images are
+         *     recompressed:
+         *
+         *       - `low`: recompacts the PDF's internal object/stream structure
+         *         only. No image is re-encoded, so this is close to lossless.
+         *       - `medium`: also re-runs flate compression at its slowest, smallest
+         *         setting and re-encodes images above roughly 200x200 pixels as
+         *         JPEG where that is smaller.
+         *       - `high`: the same as `medium`, but with no minimum image size -
+         *         every image, however small, is a candidate for JPEG
+         *         re-encoding.
+         *
+         *     Unlike `/pdf/repair`, a damaged input that qpdf can only partially
+         *     recover (its "warnings only" exit code) is treated as a failure here,
+         *     not a success - a compression request should not silently also
+         *     repair and re-save a broken file.
+         */
+        post: operations["compressPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/ocr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a PDF searchable
+         * @description Adds an invisible, searchable OCR text layer to a PDF and answers
+         *     with the result - the same OCR engine `/convert/docx` uses
+         *     internally on a scanned source, exposed here as its own "make this
+         *     searchable" endpoint rather than only a side effect of a Word export.
+         *
+         *     With `force` false (the default): a PDF that already has real text
+         *     on every page is returned unchanged, since there is nothing to do.
+         *     A PDF with no extractable text at all (a scan) is OCR'd.
+         *
+         *     With `force` true: the PDF is re-OCR'd unconditionally, discarding
+         *     whatever text is already there first - for a document whose existing
+         *     text layer is wrong in some way and cannot be trusted.
+         */
+        post: operations["ocrPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/form-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List a PDF's AcroForm fields
+         * @description Answers with JSON describing every AcroForm field in the PDF: its
+         *     name, type, current value and (for a radio group, dropdown or option
+         *     list) its available choices. A PDF with no AcroForm at all - most
+         *     PDFs - answers with an empty array, not an error: the document opened
+         *     fine and simply has no form fields, the same "nothing to extract"
+         *     situation `E_NO_TABLES`/`E_NO_LAYERS` describe for other extractors.
+         *
+         *     This is the one page endpoint that answers with `application/json`
+         *     instead of a PDF.
+         */
+        post: operations["listPdfFormFields"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/fill-form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill a PDF's AcroForm fields
+         * @description Sets the named AcroForm fields to the given values and answers with
+         *     the resulting PDF. `fields` is a JSON object mapping each field name
+         *     to a string (text, radio, dropdown or option-list fields) or a
+         *     boolean (checkboxes). Naming a field that does not exist on the form
+         *     is refused with `400 E_INVALID_FIELD`, as is a value of the wrong
+         *     type for its field.
+         *
+         *     With `flatten` true, the filled values are baked into permanent page
+         *     content and the form fields are removed afterwards - useful for a
+         *     "final" document nobody should edit further. Defaults to `false`,
+         *     leaving the fields in place and editable.
+         */
+        post: operations["fillPdfForm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Diff two PDFs, page by page
+         * @description Answers with JSON: each pair of pages (up to the shorter document's
+         *     page count) is compared as text, line by line, and reported as either
+         *     equal or a list of `equal`/`insert`/`delete`/`replace` diff chunks.
+         *     Pages beyond the shorter document's length are reported separately as
+         *     `extraPagesInA`/`extraPagesInB` rather than diffed against nothing.
+         *
+         *     Needs EXACTLY two PDFs, under the field name `files` - one file or
+         *     three or more is refused with `400`.
+         */
+        post: operations["comparePdfs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stamp a "simple signature" onto a PDF's pages
+         * @description Draws `elements` permanently onto the page content - a typed, drawn or
+         *     uploaded signature/initials, a company stamp image, or a name/date/
+         *     free text field - each placed by the caller at an exact `x`/`y`/
+         *     `width`/`height` box on a given page.
+         *
+         *     This is a VISUAL mark only, the same kind `/pdf/watermark` and
+         *     `/pdf/page-numbers` bake in, not a cryptographic signature: there is
+         *     no certificate, no PKI, and nothing an eIDAS/ESIGN/UETA-style
+         *     verifier would recognise as a digital signature. Real (certificate-
+         *     based) signing is not implemented by this endpoint or this service.
+         *
+         *     `elements` is a JSON array (as a plain multipart text field, like
+         *     `/pdf/fill-form`'s `fields`). Each element:
+         *
+         *     ```
+         *     {
+         *       "type": "signature" | "initials" | "stamp" | "name" | "date" | "text",
+         *       "page": 1,
+         *       "x": 72, "y": 700, "width": 200, "height": 40,
+         *       "value": "Ada Lovelace",
+         *       "imageIndex": 0,
+         *       "fontStyle": "cursive",
+         *       "color": "black"
+         *     }
+         *     ```
+         *
+         *     `x`/`y` are TOP-LEFT origin in points - (0,0) is the page's top-left
+         *     corner, the natural coordinate system a browser canvas overlay
+         *     reports - which this endpoint flips internally to PDF's bottom-left
+         *     origin.
+         *
+         *     Exactly one of `value`/`imageIndex` is required per element, and
+         *     which one depends on `type`: `"stamp"` REQUIRES `imageIndex` (there
+         *     is no typed stamp); `"name"`/`"date"`/`"text"` REQUIRE `value` (there
+         *     is no image form of these, and they always render in a plain font
+         *     regardless of `fontStyle`); `"signature"`/`"initials"` accept EITHER
+         *     - `value` for a typed signature, `imageIndex` for one drawn or
+         *     uploaded as an image.
+         *
+         *     `imageIndex` is a 0-based index into the `images` files uploaded
+         *     alongside `file`. Only PNG/JPG are accepted for `images` - SVG
+         *     signature/stamp uploads are not supported, since rasterising
+         *     arbitrary SVG would need a conversion step (a dedicated rasteriser or
+         *     LibreOffice Draw) this pipeline does not otherwise have.
+         *
+         *     `fontStyle` (default `"cursive"`) only affects a TYPED signature/
+         *     initials: `"cursive"` is an embedded handwriting-style font,
+         *     `"cursive2"` a second, visually distinct style, `"plain"` a plain
+         *     sans-serif. `color` (default `"black"`) applies to any text-rendered
+         *     element; both are ignored for image-backed elements.
+         */
+        post: operations["signPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/redact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Permanently remove content under `areas`, not draw over it
+         * @description For every rectangle in `areas`, the underlying text, embedded images
+         *     and vector graphics that intersect it are genuinely DELETED from the
+         *     document - not covered by an opaque box drawn on top, which would
+         *     leave the original content fully intact and extractable underneath
+         *     (`pdftotext`, copy-paste, or any viewer's "show hidden layers" would
+         *     still recover it). This is real redaction: after this endpoint runs,
+         *     the removed content is not present anywhere in the output PDF's text
+         *     or graphics, confirmed by extracting text from a redacted region and
+         *     finding it gone.
+         *
+         *     `areas` is a JSON array (a plain multipart text field, like
+         *     `/pdf/fill-form`'s `fields` and `/pdf/sign`'s `elements`):
+         *
+         *     ```
+         *     [{ "page": 1, "x": 100, "y": 200, "width": 150, "height": 30 }]
+         *     ```
+         *
+         *     `page` is 1-based. `x`/`y`/`width`/`height` are in points, TOP-LEFT
+         *     origin - `(0,0)` is the page's top-left corner, the same convention
+         *     `/pdf/sign`'s `elements` already use, so a caller already familiar
+         *     with that endpoint's coordinate system reuses it here unchanged.
+         *
+         *     Limitation, observed directly rather than assumed: the underlying
+         *     engine removes exactly the glyphs/graphics that intersect the
+         *     rectangle, at whatever granularity the page's content stream stores
+         *     them at - it does NOT expand a partial overlap to cover a whole word.
+         *     A rectangle covering only the first half of a word removes only
+         *     that half; the remaining half is still fully present, both visually
+         *     and in extracted text. A rectangle must fully cover everything that
+         *     needs to disappear - a caller drawing an under-sized box will leak
+         *     a visible, readable fragment of the "redacted" content.
+         *
+         *     `areas` must be non-empty: a redact request naming nothing to redact
+         *     is not treated as a harmless no-op, since there is no reason to call
+         *     this endpoint at all with nothing to remove.
+         */
+        post: operations["redactPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pdf/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draw text, images, shapes and freehand strokes onto a PDF's pages
+         * @description The general-purpose sibling of `/pdf/sign`: draws `elements`
+         *     permanently onto the page content, where `/pdf/sign` only ever draws
+         *     one of six signature-shaped marks, this draws free text, an image,
+         *     a rectangle, an ellipse, a line or a freehand stroke, each placed by
+         *     the caller anywhere on a given page. Same request shape as
+         *     `/pdf/sign` (a JSON `elements` array, plus any images it references)
+         *     and the same VISUAL-mark caveat: this bakes pixels/glyphs into the
+         *     page content, it is not an editable annotation layer and it is not a
+         *     cryptographic signature.
+         *
+         *     `elements` is a JSON array (as a plain multipart text field, like
+         *     `/pdf/sign`'s `elements`). Each element's shape depends on its
+         *     `type` - there is no one geometry every mark shares:
+         *
+         *     ```
+         *     [
+         *       { "type": "text", "page": 1, "x": 72, "y": 700, "value": "Approved", "fontSize": 14, "color": "red" },
+         *       { "type": "image", "page": 1, "x": 72, "y": 600, "width": 120, "height": 40, "imageIndex": 0 },
+         *       { "type": "rectangle", "page": 1, "x": 72, "y": 500, "width": 150, "height": 30, "color": "blue", "fill": false },
+         *       { "type": "ellipse", "page": 1, "x": 72, "y": 450, "width": 60, "height": 60, "color": "green", "fill": true },
+         *       { "type": "line", "page": 1, "x1": 72, "y1": 400, "x2": 220, "y2": 400, "color": "black", "strokeWidth": 2 },
+         *       { "type": "freehand", "page": 1, "points": [{"x":72,"y":350},{"x":90,"y":360},{"x":110,"y":345}], "color": "black" }
+         *     ]
+         *     ```
+         *
+         *     - **`text`**: `x`/`y` (the box's top-left corner), `value`
+         *       (required), optional `fontSize` (default `14`) and `color`.
+         *     - **`image`**: `x`/`y`/`width`/`height` and `imageIndex`, a 0-based
+         *       index into the `images` files uploaded alongside `file` - PNG/JPG
+         *       only, the same as `/pdf/sign`'s `images`.
+         *     - **`rectangle`** / **`ellipse`**: `x`/`y`/`width`/`height`, optional
+         *       `color`, `strokeWidth` (default `2`) and `fill` (default `false` -
+         *       outline only; `true` fills the shape with `color` instead).
+         *     - **`line`**: `x1`/`y1`/`x2`/`y2` endpoints, optional `color` and
+         *       `strokeWidth`.
+         *     - **`freehand`**: `points`, an array of at least two `{x, y}`
+         *       coordinates in drawing order, connected as a polyline - optional
+         *       `color` and `strokeWidth`. This is a piecewise-straight
+         *       approximation of the stroke, not a fitted curve; sampling
+         *       mouse/touch movement at a reasonable rate makes the difference
+         *       visually negligible.
+         *
+         *     Every position is TOP-LEFT origin in points - `(0,0)` is the page's
+         *     top-left corner, the same convention `/pdf/sign` and `/pdf/redact`
+         *     already use, flipped internally to PDF's bottom-left origin.
+         */
+        post: operations["editPdf"];
         delete?: never;
         options?: never;
         head?: never;
@@ -94,18 +741,49 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description One AcroForm field, as read by `POST /pdf/form-fields`. */
+        FormField: {
+            /** @description The field's fully-qualified name in the PDF. */
+            name: string;
+            /** @enum {string} */
+            type: "text" | "checkbox" | "radio" | "dropdown" | "optionList" | "button" | "unknown";
+            /**
+             * @description The field's current value: a string for `text`, a boolean for
+             *     `checkbox`, a string (or absent, if nothing is selected) for
+             *     `radio`/`dropdown`, an array of strings for a multiselect
+             *     `optionList`, or absent for `button`/`unknown`.
+             */
+            value?: unknown;
+            /** @description Available choices - `radio`, `dropdown` and `optionList` only. */
+            options?: string[];
+        };
+        ComparePageDiffOp: {
+            /** @enum {string} */
+            op: "equal" | "insert" | "delete" | "replace";
+            /** @description The lines from document A this chunk covers. */
+            a: string[];
+            /** @description The lines from document B this chunk covers. */
+            b: string[];
+        };
+        ComparePage: {
+            /** @description 1-based page number. */
+            page: number;
+            equal: boolean;
+            /** @description Present only when `equal` is false. */
+            diff?: components["schemas"]["ComparePageDiffOp"][];
+        };
         /**
          * @description Identifier of an output format, as used in the `/convert/{target}` path
          *     and returned by `GET /formats`.
          * @enum {string}
          */
-        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg";
+        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg" | "tables" | "layers" | "pdfa" | "markdown";
         /**
          * @description Stable machine-readable identifier for the failure. For logs, metrics
          *     and support only - the client never shows this to the user.
          * @enum {string}
          */
-        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL";
+        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_NO_TABLES" | "E_NO_LAYERS" | "E_BAD_PAGE_RANGE" | "E_TOO_FEW_FILES" | "E_WRONG_PASSWORD" | "E_INVALID_FIELD" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL";
         /**
          * @description The body of every non-2xx response. There are no exceptions: error
          *     paths that Express or multer would normally render as an HTML page are
@@ -139,14 +817,98 @@ export interface components {
                 "application/pdf": string;
             };
         };
+        /** @description Every AcroForm field in the PDF - `[]` if it has no form at all. */
+        FormFieldsResult: {
+            headers: {
+                "X-Request-Id"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example [
+                 *       {
+                 *         "name": "name",
+                 *         "type": "text",
+                 *         "value": ""
+                 *       },
+                 *       {
+                 *         "name": "agree",
+                 *         "type": "checkbox",
+                 *         "value": false
+                 *       }
+                 *     ]
+                 */
+                "application/json": components["schemas"]["FormField"][];
+            };
+        };
+        /** @description The per-page text diff of the two uploaded PDFs. */
+        CompareResult: {
+            headers: {
+                "X-Request-Id"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "pageCountA": 2,
+                 *       "pageCountB": 2,
+                 *       "pages": [
+                 *         {
+                 *           "page": 1,
+                 *           "equal": true
+                 *         },
+                 *         {
+                 *           "page": 2,
+                 *           "equal": false,
+                 *           "diff": [
+                 *             {
+                 *               "op": "replace",
+                 *               "a": [
+                 *                 "Hello world"
+                 *               ],
+                 *               "b": [
+                 *                 "Goodbye world"
+                 *               ]
+                 *             }
+                 *           ]
+                 *         }
+                 *       ],
+                 *       "extraPagesInA": [],
+                 *       "extraPagesInB": []
+                 *     }
+                 */
+                "application/json": {
+                    pageCountA: number;
+                    pageCountB: number;
+                    /** @description One entry per page pair, up to the shorter document's length. */
+                    pages: components["schemas"]["ComparePage"][];
+                    /** @description 1-based pages that exist in A but not in B. */
+                    extraPagesInA: number[];
+                    /** @description 1-based pages that exist in B but not in A. */
+                    extraPagesInB: number[];
+                };
+            };
+        };
         /**
-         * @description The converted file.
+         * @description The converted file - or files.
          *
-         *     The media type is the target's own - `application/pdf` for `pdf`,
-         *     `text/csv` for `csv`, and so on. **The image targets are the exception**:
-         *     `png` and `jpg` always answer with `application/zip`, because there is
-         *     one image per page and a ZIP is the only way to put several files in one
-         *     response.
+         *     **Exactly one file uploaded:** the media type is the target's own -
+         *     `application/pdf` for `pdf`, `text/csv` for `csv`, and so on. The image
+         *     targets are the exception: `png` and `jpg` always answer with
+         *     `application/zip`, because there is one image per page and a ZIP is
+         *     the only way to put several files in one response.
+         *
+         *     **Two or more files uploaded:** always `application/zip`, regardless
+         *     of target, holding one entry per input file named
+         *     `<NN>-<original name>.<target extension>` (`01-report.pdf`,
+         *     `02-invoice.pdf`, ...), or a `<NN>-<original name>/` folder of images
+         *     for an image target. A file that failed to convert contributes no
+         *     entry of its own; instead, if any file in the batch failed, the
+         *     archive additionally holds `errors.json` - an array of
+         *     `{ file, code, message }`, in upload order, naming every failure. A
+         *     batch where every file failed still answers `200` with a ZIP holding
+         *     only `errors.json`, because the failures are per file, not a fact
+         *     about the request as a whole.
          */
         ConvertedToTarget: {
             headers: {
@@ -182,21 +944,14 @@ export interface components {
         };
         /**
          * @description The request was not a usable upload: no file part named `file`, several
-         *     files, or a part under a different name.
+         *     files, a part under a different name - or, distinctly, the optional
+         *     `ocr` field was something other than `true`/`false`.
          */
         BadRequest: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                /**
-                 * @example {
-                 *       "error": {
-                 *         "code": "E_BAD_REQUEST",
-                 *         "message": "The document could not be received. Please try again."
-                 *       }
-                 *     }
-                 */
                 "application/json": components["schemas"]["ErrorEnvelope"];
             };
         };
@@ -234,7 +989,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNKNOWN_TARGET",
-                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG."
+                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG, XLSX (tables), PNG (layers), PDF/A, Markdown."
                  *       }
                  *     }
                  */
@@ -282,7 +1037,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNSUPPORTED",
-                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .odt, .ods, .odp, .xlsx, .pptx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg."
+                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .odt, .ods, .odp, .xlsx, .pptx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg, .psd, .pdf."
                  *       }
                  *     }
                  */
@@ -308,7 +1063,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNSUPPORTED_TARGET",
-                 *         "message": "A .docx file can be converted to: PDF, ODT, TXT, HTML, RTF, EPUB."
+                 *         "message": "A .docx file can be converted to: PDF, ODT, TXT, HTML, RTF, EPUB, XLSX (tables)."
                  *       }
                  *     }
                  */
@@ -316,12 +1071,85 @@ export interface components {
             };
         };
         /**
-         * @description The document is password protected. Detected before LibreOffice runs,
-         *     because LibreOffice reports an encrypted document the same way it
-         *     reports a corrupt one, and telling a user their file is damaged when it
-         *     merely needs a password is both wrong and unhelpful.
+         * @description The document was received and read, and the answer is that there is no
+         *     answer. Two quite different situations land here, and both are the
+         *     document's own doing rather than a fault:
+         *
+         *     **Password protected.** Detected before LibreOffice runs, because
+         *     LibreOffice reports an encrypted document the same way it reports a
+         *     corrupt one, and telling a user their file is damaged when it merely
+         *     needs a password is both wrong and unhelpful.
+         *
+         *     **No tables, and no layers.** Only an `extract` target can produce
+         *     either: those are the targets that read the document's contents rather
+         *     than converting the document as a whole, so they are the only ones that
+         *     can open a file successfully and find nothing to work with. Reporting
+         *     one as a conversion failure would say the file may be damaged when the
+         *     truth is that it is a perfectly good document with no tables in it, or
+         *     one whose layers are all adjustment and text layers and therefore have
+         *     no pixels to write.
          */
-        Encrypted: {
+        Unprocessable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description The `pages`/`order` field named something that is not a coherent
+         *     instruction against the document it came with: missing, malformed
+         *     (not `2,5-7,10`), naming a page outside the document, or - for
+         *     `/pdf/organize` only - not a true permutation of every page.
+         *
+         *     The message is the specific problem rather than a fixed sentence: a
+         *     page number is something the person who typed it can fix, where a
+         *     generic "bad request" is not.
+         */
+        BadPageRange: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description `/pdf/merge` needs at least two files, `/pdf/scan-to-pdf` needs at
+         *     least one, and `/pdf/compare` needs EXACTLY two - each a genuine
+         *     "there is nothing to do" (or "not what was asked for") rather than a
+         *     malformed request.
+         */
+        TooFewFiles: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description A form field for `/pdf/rotate`, `/pdf/watermark`, `/pdf/protect`,
+         *     `/pdf/unlock`, `/pdf/ocr` or `/pdf/fill-form` (`degrees`, `text`,
+         *     `password`, `force`, `fields`) is missing or malformed. The message
+         *     names the specific field and what is wrong with it.
+         */
+        InvalidField: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description `/pdf/unlock` was given a password that does not open the file.
+         *     Distinct from `E_ENCRYPTED`: that code means the file was refused
+         *     because it is locked; this one means a password was tried and it was
+         *     the wrong one.
+         */
+        WrongPassword: {
             headers: {
                 [name: string]: unknown;
             };
@@ -329,8 +1157,8 @@ export interface components {
                 /**
                  * @example {
                  *       "error": {
-                 *         "code": "E_ENCRYPTED",
-                 *         "message": "This document is password protected."
+                 *         "code": "E_WRONG_PASSWORD",
+                 *         "message": "That password does not unlock this PDF."
                  *       }
                  *     }
                  */
@@ -420,29 +1248,440 @@ export interface components {
     parameters: never;
     requestBodies: {
         /**
-         * @description Exactly one file part named `file`. Additional parts, or a part under
-         *     a different name, are rejected with `400`.
+         * @description One or more file parts, all named `files`, plus the optional `ocr`
+         *     field below. A request with no `files` part is rejected with `400`;
+         *     one under any other name is simply not this field and is ignored the
+         *     same way any unrecognised part would be.
          *
-         *     The overall body limit is **26214400 bytes (25 MB)**, matching the
-         *     client's own `MAX_UPLOAD_BYTES` and the reverse proxy's body limit.
-         *     Exceeding it at any layer produces `413`.
+         *     Each file is capped at **26214400 bytes (25 MB)**, matching the
+         *     client's own `MAX_UPLOAD_BYTES` and the reverse proxy's body limit -
+         *     exceeding it at any layer produces `413`. With more than one file,
+         *     their combined size is additionally capped (`MAX_CONVERT_TOTAL_BYTES`,
+         *     100 MB by default) and their count is capped at `MAX_CONVERT_FILES`
+         *     (15 by default), both also `413`.
          */
         Upload: {
             content: {
                 "multipart/form-data": {
                     /**
-                     * Format: binary
-                     * @description The file to convert. Its **filename extension** selects the
-                     *     import filter and must be one of the extensions listed by
-                     *     `GET /formats` (case-insensitive). The declared `Content-Type`
-                     *     of this part is ignored.
+                     * @description The file(s) to convert. Each one's **filename extension**
+                     *     selects its own import filter and must be one of the
+                     *     extensions listed by `GET /formats` (case-insensitive). The
+                     *     declared `Content-Type` of each part is ignored.
                      *
-                     *     The filename is never used as a path on disk: the upload is
-                     *     written to a server-generated name inside a per-request
-                     *     temporary directory, so a name like `../../etc/passwd.docx`
-                     *     is harmless.
+                     *     Filenames are never used as a path on disk: each upload is
+                     *     written to a server-generated name inside its own temporary
+                     *     directory, so a name like `../../etc/passwd.docx` is
+                     *     harmless.
+                     */
+                    files: string[];
+                    /**
+                     * @description Only meaningful for a PDF asking for `docx` with no
+                     *     extractable text (a scan) or built on Type3 fonts -
+                     *     silently ignored by every other source/target pair. When
+                     *     true (the default), the page is OCR'd, so it becomes real,
+                     *     reflowable text instead of an uneditable picture of one -
+                     *     with no embedded image, for either case. Set to `false` to
+                     *     skip OCR and get the page as a plain image with no text
+                     *     instead. Applies to every file in the request alike.
+                     * @default true
+                     * @enum {string}
+                     */
+                    ocr?: "true" | "false";
+                };
+            };
+        };
+        /**
+         * @description Two or more PDFs, all under the field name `files`, in the order they
+         *     should be concatenated.
+         */
+        MergeUpload: {
+            content: {
+                "multipart/form-data": {
+                    /** @description The PDFs to merge, in order. Each must be a `.pdf`. */
+                    files: string[];
+                };
+            };
+        };
+        /** @description One PDF, plus how many pages each output file should hold. */
+        SplitUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to split.
                      */
                     file: string;
+                    /**
+                     * @description Pages per output file, as a positive whole number. Defaults
+                     *     to `1` (one file per page). The last file holds whatever is
+                     *     left over: a 7-page document split every 3 pages produces
+                     *     3, 3, then 1 page.
+                     * @example 1
+                     */
+                    every?: string;
+                };
+            };
+        };
+        /** @description One PDF, plus which pages to remove. */
+        RemovePagesUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to remove pages from.
+                     */
+                    file: string;
+                    /**
+                     * @description 1-based page numbers and inclusive ranges to remove, comma
+                     *     separated: `2,5-7,10`. Removing every page is refused.
+                     * @example 2,5-7
+                     */
+                    pages: string;
+                };
+            };
+        };
+        /** @description One PDF, plus which pages to keep, in the order to keep them. */
+        ExtractPagesUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to extract pages from.
+                     */
+                    file: string;
+                    /**
+                     * @description 1-based page numbers and inclusive ranges to keep, comma
+                     *     separated, in the exact order they should appear in the
+                     *     output: `3,1,2` keeps pages 1-3, reordered.
+                     * @example 1,3-4
+                     */
+                    pages: string;
+                };
+            };
+        };
+        /** @description One PDF, plus its new page order. */
+        OrganizeUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to reorder.
+                     */
+                    file: string;
+                    /**
+                     * @description The new page order, as 1-based page numbers and inclusive
+                     *     ranges naming EVERY page of the document exactly once:
+                     *     `3,1,2` on a 3-page document reorders it, but `1,2` or
+                     *     `1,1,2` are refused, because organizing does not drop or
+                     *     duplicate a page - use `/pdf/remove-pages` to drop one.
+                     * @example 3,1,2
+                     */
+                    order: string;
+                };
+            };
+        };
+        /**
+         * @description One or more images, all under the field name `files`, in the order
+         *     they should become pages.
+         */
+        ScanUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * @description The images to scan, in order. Each must be `.png`, `.jpg`
+                     *     or `.jpeg`. Each page is sized to its own image's pixel
+                     *     dimensions, so mixing portrait and landscape photos is fine.
+                     */
+                    files: string[];
+                };
+            };
+        };
+        /** @description One PDF, how far to rotate it, and optionally which pages. */
+        RotateUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to rotate.
+                     */
+                    file: string;
+                    /**
+                     * @description Clockwise rotation in degrees, as a multiple of 90 (may be
+                     *     negative). Added to each page's existing rotation.
+                     * @example 90
+                     */
+                    degrees: string;
+                    /**
+                     * @description 1-based page numbers and inclusive ranges to rotate, comma
+                     *     separated: `2,5-7,10`. Omit to rotate every page.
+                     * @example 1,3
+                     */
+                    pages?: string;
+                };
+            };
+        };
+        /** @description One PDF, the text to stamp, and optionally which pages. */
+        WatermarkUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to watermark.
+                     */
+                    file: string;
+                    /**
+                     * @description The text to stamp across each page.
+                     * @example CONFIDENTIAL
+                     */
+                    text: string;
+                    /**
+                     * @description 1-based page numbers and inclusive ranges to stamp, comma
+                     *     separated. Omit to stamp every page.
+                     * @example 1,3
+                     */
+                    pages?: string;
+                };
+            };
+        };
+        /** @description One PDF, plus the password to encrypt it with. */
+        ProtectUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to encrypt. Must not already be encrypted.
+                     */
+                    file: string;
+                    /** @description Used as both the user and owner password. */
+                    password: string;
+                };
+            };
+        };
+        /** @description One encrypted PDF, plus the password that opens it. */
+        UnlockUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The encrypted PDF to decrypt.
+                     */
+                    file: string;
+                    /** @description The password that opens the file. */
+                    password: string;
+                };
+            };
+        };
+        /** @description One PDF, plus the margins to trim and optionally which pages. */
+        CropUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to crop.
+                     */
+                    file: string;
+                    /**
+                     * @description Points to trim off the left edge. Defaults to `0`.
+                     * @example 10
+                     */
+                    left?: string;
+                    /** @description Points to trim off the right edge. Defaults to `0`. */
+                    right?: string;
+                    /** @description Points to trim off the top edge. Defaults to `0`. */
+                    top?: string;
+                    /** @description Points to trim off the bottom edge. Defaults to `0`. */
+                    bottom?: string;
+                    /**
+                     * @description 1-based page numbers and inclusive ranges to crop, comma
+                     *     separated. Omit to crop every page.
+                     * @example 1,3
+                     */
+                    pages?: string;
+                };
+            };
+        };
+        /** @description One PDF, plus where to draw the numbers and where to start. */
+        PageNumbersUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to number.
+                     */
+                    file: string;
+                    /**
+                     * @description Where each number is drawn. Defaults to `bottom-center`.
+                     * @enum {string}
+                     */
+                    position?: "bottom-center" | "bottom-left" | "bottom-right";
+                    /**
+                     * @description The number to draw on the first page. Defaults to `1`.
+                     * @example 1
+                     */
+                    startAt?: string;
+                };
+            };
+        };
+        /** @description One PDF to repair. No other fields. */
+        RepairUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to repair.
+                     */
+                    file: string;
+                };
+            };
+        };
+        /** @description One PDF, plus optionally how aggressively to recompress it. */
+        CompressUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to compress. Must not already be encrypted.
+                     */
+                    file: string;
+                    /**
+                     * @description How aggressively to recompress images and streams. `low`
+                     *     is close to lossless (no image re-encoding); `medium`
+                     *     (the default) re-encodes larger images as JPEG where
+                     *     smaller; `high` does the same with no minimum image size.
+                     * @default medium
+                     * @enum {string}
+                     */
+                    level?: "low" | "medium" | "high";
+                };
+            };
+        };
+        /** @description One PDF, plus whether to unconditionally re-OCR it. */
+        OcrUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to make searchable.
+                     */
+                    file: string;
+                    /**
+                     * @description When true, re-OCR the PDF unconditionally, discarding any
+                     *     existing text layer first. When false (the default), a PDF
+                     *     that already has real text is returned unchanged and only
+                     *     a PDF with none is OCR'd.
+                     * @default false
+                     * @enum {string}
+                     */
+                    force?: "true" | "false";
+                };
+            };
+        };
+        /** @description One PDF, plus the field values to set. */
+        FillFormUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF whose form fields should be filled.
+                     */
+                    file: string;
+                    /**
+                     * @description A JSON object mapping each field name to its new value: a
+                     *     string for a text, radio, dropdown or option-list field, or
+                     *     a boolean for a checkbox.
+                     * @example {"name": "Ada Lovelace", "agree": true}
+                     */
+                    fields: string;
+                    /**
+                     * @description When true, bake the filled values into permanent page
+                     *     content and remove the form fields afterwards, so the
+                     *     result is no longer editable.
+                     * @default false
+                     * @enum {string}
+                     */
+                    flatten?: "true" | "false";
+                };
+            };
+        };
+        /** @description Exactly two PDFs, both under the field name `files`. */
+        CompareUpload: {
+            content: {
+                "multipart/form-data": {
+                    /** @description The two PDFs to compare. */
+                    files: string[];
+                };
+            };
+        };
+        /** @description One PDF, the elements to stamp onto it, and any images those elements reference. */
+        SignUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF being signed.
+                     */
+                    file: string;
+                    /**
+                     * @description A JSON array of elements to draw onto the page. See the
+                     *     `/pdf/sign` description for the full shape and the rules
+                     *     around `value`/`imageIndex`.
+                     * @example [{"type":"name","page":1,"x":72,"y":700,"width":200,"height":24,"value":"Ada Lovelace"}]
+                     */
+                    elements: string;
+                    /**
+                     * @description PNG/JPG images referenced by 0-based index from
+                     *     `elements[].imageIndex` - drawn/uploaded signatures,
+                     *     initials and company stamps. Optional; omit entirely when
+                     *     every element is typed text.
+                     */
+                    images?: string[];
+                };
+            };
+        };
+        /** @description One PDF, plus the regions to permanently strip from it. */
+        RedactUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF to redact.
+                     */
+                    file: string;
+                    /**
+                     * @description A non-empty JSON array of `{page, x, y, width, height}`
+                     *     regions to genuinely remove (not merely cover) - see the
+                     *     `/pdf/redact` description for the full coordinate contract
+                     *     and the partial-overlap limitation.
+                     * @example [{"page":1,"x":100,"y":200,"width":150,"height":30}]
+                     */
+                    areas: string;
+                };
+            };
+        };
+        /** @description One PDF, the elements to draw onto it, and any images those elements reference. */
+        EditUpload: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The PDF being edited.
+                     */
+                    file: string;
+                    /**
+                     * @description A JSON array of marks to draw onto the page. See the
+                     *     `/pdf/edit` description for the full shape - it differs by
+                     *     `type` (`text`/`image`/`rectangle`/`ellipse`/`line`/
+                     *     `freehand`).
+                     * @example [{"type":"text","page":1,"x":72,"y":700,"value":"Approved","fontSize":14}]
+                     */
+                    elements: string;
+                    /**
+                     * @description PNG/JPG images referenced by 0-based index from
+                     *     `elements[].imageIndex` (`type: "image"` elements only).
+                     *     Optional; omit entirely when no element is an image.
+                     */
+                    images?: string[];
                 };
             };
         };
@@ -469,11 +1708,408 @@ export interface operations {
             404: components["responses"]["UnknownTarget"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedTarget"];
-            422: components["responses"]["Encrypted"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ConvertFailed"];
             503: components["responses"]["Busy"];
             504: components["responses"]["Timeout"];
+        };
+    };
+    mergePdfs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["MergeUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["TooFewFiles"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    splitPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["SplitUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToTarget"];
+            400: components["responses"]["BadPageRange"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    removePdfPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["RemovePagesUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["BadPageRange"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    extractPdfPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ExtractPagesUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["BadPageRange"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    organizePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OrganizeUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["BadPageRange"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    scanToPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ScanUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["TooFewFiles"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    rotatePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["RotateUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    watermarkPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["WatermarkUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    protectPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ProtectUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    unlockPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UnlockUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["WrongPassword"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    cropPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CropUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    addPageNumbers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["PageNumbersUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    repairPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["RepairUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    compressPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CompressUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    ocrPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OcrUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+            504: components["responses"]["Timeout"];
+        };
+    };
+    listPdfFormFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["RepairUpload"];
+        responses: {
+            200: components["responses"]["FormFieldsResult"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    fillPdfForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["FillFormUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    comparePdfs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CompareUpload"];
+        responses: {
+            200: components["responses"]["CompareResult"];
+            400: components["responses"]["TooFewFiles"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    signPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["SignUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    redactPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["RedactUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    editPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["EditUpload"];
+        responses: {
+            200: components["responses"]["ConvertedToPdf"];
+            400: components["responses"]["InvalidField"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["Unsupported"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ConvertFailed"];
+            503: components["responses"]["Busy"];
         };
     };
     listFormats: {
@@ -536,9 +2172,16 @@ export interface operations {
                             /**
                              * @description The LibreOffice document family that handles it.
                              *     Sources in the same family convert the same way.
-                             * @enum {string}
+                             *
+                             *     `null` for a source LibreOffice does not open at
+                             *     all - `.psd` today. Such a source is handled
+                             *     entirely by this service's own code, which is why
+                             *     it can only ever offer `extract` targets; its
+                             *     absence is a fact about the source rather than a
+                             *     field this version happens to omit.
+                             * @enum {string|null}
                              */
-                            family: "writer" | "calc" | "impress" | "draw";
+                            family: "writer" | "calc" | "impress" | "draw" | null;
                             targets: components["schemas"]["TargetId"][];
                         }[];
                         /** @description Every format this service can produce. */

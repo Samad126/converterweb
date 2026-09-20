@@ -44,6 +44,7 @@ export function SiteHeader(): React.ReactElement {
             </Link>
           ))}
           <Link href="/conversions">All tools</Link>
+          <Link href="/pdf">PDF tools</Link>
         </nav>
       </div>
     </header>

@@ -378,7 +378,7 @@ export function useConverter(options?: ConverterOptions): Converter {
     startedAtRef.current = Date.now();
     setPhase({ name: "converting", stage: "uploading", loaded: 0, total: file.size });
 
-    const handle = convert(targetId, file, {
+    const handle = convert(targetId, [file], {
       onUploadProgress: (progress) => {
         setPhase((current) =>
           // Only while the upload is still the phase. A progress event that

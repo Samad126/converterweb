@@ -187,19 +187,22 @@ export interface ConvertHandle {
 }
 
 /**
- * `POST /convert/{target}` with exactly one part named `file`.
+ * `POST /convert/{target}` with one or more parts, all named `files`.
  *
- * The part is sent as `application/octet-stream` whatever the file claims to
+ * Each part is sent as `application/octet-stream` whatever the file claims to
  * be, because the server picks its import filter from the filename extension
  * and ignores the declared type entirely. The original filename goes along as
  * the third argument to `append` — the extension in it is the whole mechanism.
  *
  * The caller checks the returned `mediaType`: this function reports what came
- * back, and refuses to decide whether it was the right thing to have come back.
+ * back, and refuses to decide whether it was the right thing to have come
+ * back. With a single file that is the target's own type (or a ZIP, for a
+ * `multiple` target); with two or more it is always `application/zip`,
+ * regardless of target — see `UPLOAD_PART_NAME`.
  */
 export function convert(
   target: string,
-  file: File,
+  files: readonly File[],
   callbacks: ConvertCallbacks = {},
 ): ConvertHandle {
   const xhr = new XMLHttpRequest();
@@ -296,7 +299,9 @@ export function convert(
     // CORS request, and there is nothing to say that the multipart body does
     // not already say.
     const body = new FormData();
-    body.append(UPLOAD_PART_NAME, new Blob([file], { type: UPLOAD_PART_TYPE }), file.name);
+    for (const file of files) {
+      body.append(UPLOAD_PART_NAME, new Blob([file], { type: UPLOAD_PART_TYPE }), file.name);
+    }
     xhr.send(body);
   });
 

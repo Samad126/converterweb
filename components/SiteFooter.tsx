@@ -49,6 +49,9 @@ export function SiteFooter(): React.ReactElement {
                 <Link href="/conversions">All conversions</Link>
               </li>
               <li>
+                <Link href="/pdf">PDF tools</Link>
+              </li>
+              <li>
                 <Link href="/">Home</Link>
               </li>
             </ul>

@@ -43,7 +43,7 @@ describe("the upload", () => {
       await against(server.origin, async () => {
         const handle = convert(
           "pdf",
-          new File(["hello"], "Quarterly report.DOCX", { type: "text/plain" }),
+          [new File(["hello"], "Quarterly report.DOCX", { type: "text/plain" })],
         );
         await handle.promise;
       });
@@ -63,7 +63,7 @@ describe("the upload", () => {
       String(request?.headers["content-type"] ?? ""),
     );
     expect(parts).toHaveLength(1);
-    expect(parts[0]?.name).toBe("file");
+    expect(parts[0]?.name).toBe("files");
     // The declared type is deliberately not the file's own: the server picks
     // its import filter from the filename extension and ignores this.
     expect(parts[0]?.contentType).toBe("application/octet-stream");
@@ -83,7 +83,7 @@ describe("the upload", () => {
 
     try {
       await against(server.origin, async () => {
-        const handle = convert("pdf", new File(["x".repeat(8192)], "a.docx", { type: "" }), {
+        const handle = convert("pdf", [new File(["x".repeat(8192)], "a.docx", { type: "" })], {
           onUploadProgress: (event) => progress.push(event),
           onUploadComplete: () => {
             uploadComplete = true;
@@ -109,7 +109,7 @@ describe("cancelling", () => {
 
     try {
       await against(server.origin, async () => {
-        const handle = convert("pdf", new File(["hello"], "a.docx", { type: "" }));
+        const handle = convert("pdf", [new File(["hello"], "a.docx", { type: "" })]);
         await new Promise((resolve) => setTimeout(resolve, 50));
         handle.abort();
 
@@ -142,7 +142,7 @@ describe("cancelling", () => {
 
     try {
       await against(server.origin, async () => {
-        const handle = convert("pdf", new File(["hello"], "a.docx", { type: "" }));
+        const handle = convert("pdf", [new File(["hello"], "a.docx", { type: "" })]);
         await new Promise((resolve) => realSetTimeout(resolve, 50));
 
         const deadline = calls.find(([, delay]) => delay === CLIENT_ABORT_MS);

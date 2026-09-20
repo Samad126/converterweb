@@ -34,10 +34,24 @@ export const CLIENT_ABORT_MS = 120_000;
 export const RATE_LIMIT_COOLDOWN_MS = 30_000;
 
 /**
- * The one part name the upload may use. Any other name, or more than one part,
- * is a `400` — see `components/requestBodies/Upload` in the contract.
+ * The one part name the upload may use, repeated once per file. A request
+ * with no part under this name is a `400` — see
+ * `components/requestBodies/Upload` in the contract. `/convert/{target}`
+ * converts every part independently against the same target: one file
+ * answers with the target's own media type (or a ZIP, for a `multiple`
+ * target), two or more always answer with a ZIP holding one entry per file
+ * plus, on any per-file failure, an `errors.json`.
  */
-export const UPLOAD_PART_NAME = "file";
+export const UPLOAD_PART_NAME = "files";
+
+/**
+ * The most files a single `/convert/{target}` request may carry, and their
+ * combined size limit — both enforced by the server (`MAX_CONVERT_FILES`,
+ * `MAX_CONVERT_TOTAL_BYTES`) and mirrored here so a request that cannot
+ * possibly succeed is refused before it is sent.
+ */
+export const MAX_CONVERT_FILES = 15;
+export const MAX_CONVERT_TOTAL_BYTES = 104_857_600;
 
 /**
  * What the part is declared as, regardless of what the file claims to be.
