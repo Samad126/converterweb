@@ -739,6 +739,16 @@
     color: var(--paper);
   }
 
+  .site-header-search {
+    flex: 1 1 auto;
+    max-width: 320px;
+  }
+
+  .site-header-search .tool-search-input {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
   .site-nav {
     display: none;
     flex-wrap: wrap;
@@ -806,6 +816,12 @@
   .hero-cta {
     width: auto;
     padding-inline: 28px;
+  }
+
+  .hero-search {
+    max-width: 480px;
+    margin-inline: auto;
+    text-align: left;
   }
 
   /* --------------------------------------------------------- sections */

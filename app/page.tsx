@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { CategorySection } from "@/components/CategorySection";
 import { Faq } from "@/components/Faq";
 import { JsonLd } from "@/components/JsonLd";
-import { ToolGrid } from "@/components/ToolGrid";
+import { ToolSearch } from "@/components/ToolSearch";
 import { CATALOG, HOME_FAQS, entriesByFamily } from "@/lib/catalog";
+import { CATEGORIES } from "@/lib/categories";
 import { faqPage, itemList } from "@/lib/schema";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 
@@ -50,24 +53,25 @@ export default function HomePage(): React.ReactElement {
             a server, hands the result straight back, and deletes the file before
             the response is even sent.
           </p>
+          <div className="hero-search mt-6">
+            <Suspense fallback={<div className="tool-search-input" aria-hidden="true" />}>
+              <ToolSearch placeholder="Search a format, extension or tool — e.g. “word to pdf”" />
+            </Suspense>
+          </div>
           <p className="hero-actions">
-            <a className="btn hero-cta" href="#tools">
-              Browse all {CATALOG.length} conversions
+            <a className="btn-quiet hero-cta" href="#tools">
+              Browse every tool by category
             </a>
           </p>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- tools */}
-      <section className="shell section" id="tools">
-        <h2 className="section-title">All conversions</h2>
-        <p className="section-lede">
-          Pick the one you need. Every tool opens with the output format already
-          selected, so there is a single choice left to make: the file.
-        </p>
-
-        <ToolGrid entries={CATALOG} />
-      </section>
+      <div id="tools">
+        {CATEGORIES.map((category) => (
+          <CategorySection key={category.id} category={category} />
+        ))}
+      </div>
 
       {/* ---------------------------------------------------- how it works */}
       <section className="shell section section-rule">

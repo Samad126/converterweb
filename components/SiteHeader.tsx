@@ -12,9 +12,17 @@
  *     a link that is already on `/conversions` and in the footer. The header
  *     carries a short list; the footer carries all of them.
  *
- * The header is therefore just the wordmark and a link list — there is no call
- * to action, because the page underneath it is already the choice it would be
- * asking you to make.
+ * The header is therefore just the wordmark, search, and a link list — there
+ * is no call to action, because the page underneath it is already the choice
+ * it would be asking you to make.
+ *
+ * Search lives here too, not just in the homepage hero: the IA decision
+ * (Phase 3, Gate 3) was that search has to be reachable from every page, not
+ * only the one a visitor happens to land on. It's the same `ToolSearch`
+ * component the hero uses, mounted a second time with its own URL sync
+ * disabled (`syncUrlParam={false}`) — the homepage's `?q=` and the header's
+ * query are deliberately independent, so a filtered homepage view doesn't
+ * fight a header search on the same page for one query string.
  *
  * These links keep `next/link`'s default prefetch: there are six of them, they
  * are above the fold on every page, and preloading them is what makes moving
@@ -22,7 +30,9 @@
  * thirty-six apiece, opt out — see `ToolCard`.
  */
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { ToolSearch } from "@/components/ToolSearch";
 import { SITE_NAME } from "@/lib/site";
 import { POPULAR } from "@/lib/catalog";
 
@@ -36,6 +46,15 @@ export function SiteHeader(): React.ReactElement {
           <span className="wordmark-plain">File</span>
           <span className="wordmark-block">{SITE_NAME.split(" ").slice(1).join(" ")}</span>
         </Link>
+
+        {/* `ToolSearch` reads `useSearchParams`, which Next requires a
+            Suspense boundary around for a statically-rendered page — the
+            header is on every route, including the fully static ones. */}
+        <div className="site-header-search">
+          <Suspense fallback={<div className="tool-search-input" aria-hidden="true" />}>
+            <ToolSearch placeholder="Search tools" syncUrlParam={false} />
+          </Suspense>
+        </div>
 
         <nav className="site-nav" aria-label="Conversions">
           {POPULAR.slice(0, 4).map((entry) => (

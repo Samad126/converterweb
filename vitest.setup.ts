@@ -8,10 +8,24 @@
  */
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { server } from "./tests/msw/server";
 import { captureNativeXhr } from "./tests/transport/nativeXhr";
+
+/**
+ * A stand-in App Router, for the one thing every page-level test needs it
+ * for: `ToolSearch` (in the header and the homepage hero) calls `useRouter`
+ * and `useSearchParams`. Outside an actual Next app tree those throw, and a
+ * real router isn't the point of a test that's asserting on links or SEO
+ * metadata. `ToolSearch`'s own navigation and URL-sync behaviour is exercised
+ * directly, at the `useToolSearchController` level, in `tests/search-ui.test.tsx`
+ * — this stub only has to not crash.
+ */
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: () => undefined, replace: () => undefined }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 // Before `server.listen()` below, while the global still points at jsdom's own
 // implementation. See `tests/transport/nativeXhr.ts`.
