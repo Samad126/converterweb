@@ -5,14 +5,18 @@
  * name, date or free text onto exact page positions. Never a cryptographic
  * signature — see the copy below, which says so plainly.
  *
- * Positions are entered numerically (page, x, y, width, height, all in
- * points, top-left origin) rather than dragged on a rendered page preview —
- * see the accompanying report for why a `pdf.js` preview primitive was not
- * built in this pass.
+ * Each element's box is placed by dragging on a rendered page preview
+ * (`PdfPagePreview`) rather than typed as numbers: press "Place on page",
+ * then drag out a box on the page shown. A freshly-added element starts with
+ * a default box on page 1 so the tool is usable before any dragging happens;
+ * dragging only replaces that default.
  */
 import { useState } from "react";
 
+import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
+import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdfCoords";
 import { usePdfFileTool } from "@/lib/usePdfFileTool";
 import type { PdfPart } from "@/lib/pdfApi";
 
@@ -21,11 +25,8 @@ type FontStyle = "cursive" | "cursive2" | "plain";
 
 interface SignRow {
   type: SignElementType;
-  page: string;
-  x: string;
-  y: string;
-  width: string;
-  height: string;
+  page: number;
+  rect: Rect;
   /** For signature/initials only: whether the source is typed or an image. */
   source: "typed" | "image";
   value: string;
@@ -34,14 +35,11 @@ interface SignRow {
   imageIndex: number | null;
 }
 
-function emptyRow(): SignRow {
+function emptyRow(page: number): SignRow {
   return {
     type: "text",
-    page: "1",
-    x: "72",
-    y: "700",
-    width: "200",
-    height: "24",
+    page,
+    rect: { x: 72, y: 700, width: 200, height: 24 },
     source: "typed",
     value: "",
     fontStyle: "cursive",
@@ -56,23 +54,18 @@ const EITHER: readonly SignElementType[] = ["signature", "initials"];
 
 export function SignTool(): React.ReactElement {
   const tool = usePdfFileTool("/pdf/sign");
-  const [rows, setRows] = useState<SignRow[]>([emptyRow()]);
+  const [rows, setRows] = useState<SignRow[]>([emptyRow(1)]);
   const [images, setImages] = useState<File[]>([]);
+  const [page, setPage] = useState(1);
+  const [armedIndex, setArmedIndex] = useState<number | null>(null);
 
   const updateRow = (index: number, patch: Partial<SignRow>): void => {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
 
   function buildElement(row: SignRow): Record<string, unknown> | null {
-    const page = Number(row.page);
-    const x = Number(row.x);
-    const y = Number(row.y);
-    const width = Number(row.width);
-    const height = Number(row.height);
-    if (!Number.isFinite(page) || page < 1) return null;
-    if (!Number.isFinite(x) || !Number.isFinite(y) || width <= 0 || height <= 0) return null;
-
-    const base = { type: row.type, page, x, y, width, height };
+    if (row.rect.width <= 0 || row.rect.height <= 0) return null;
+    const base = { type: row.type, page: row.page, x: row.rect.x, y: row.rect.y, width: row.rect.width, height: row.rect.height };
 
     if (REQUIRES_IMAGE_ONLY.includes(row.type)) {
       if (row.imageIndex === null) return null;
@@ -103,6 +96,20 @@ export function SignTool(): React.ReactElement {
     ];
     tool.run(parts);
   };
+
+  function overlay(canvasSizePx: Size, pageSizePt: Size): React.ReactNode {
+    return (
+      <SignOverlay
+        canvasSizePx={canvasSizePx}
+        pageSizePt={pageSizePt}
+        page={page}
+        rows={rows}
+        armedIndex={armedIndex}
+        setArmedIndex={setArmedIndex}
+        updateRow={updateRow}
+      />
+    );
+  }
 
   return (
     <PdfToolShell tool={tool} onRun={onRun}>
@@ -136,6 +143,8 @@ export function SignTool(): React.ReactElement {
         <p className="meta">PNG or JPG only — SVG is not accepted.</p>
       </section>
 
+      <PdfPagePreview file={tool.file} page={page} onPageChange={setPage} overlay={overlay} />
+
       {rows.map((row, index) => (
         <fieldset key={index} className="panel flex flex-col gap-2">
           <legend className="font-semibold">Element {index + 1}</legend>
@@ -161,27 +170,21 @@ export function SignTool(): React.ReactElement {
             </select>
           </label>
 
-          <div className="flex flex-wrap gap-3">
-            <label className="flex flex-col gap-1">
-              <span>Page</span>
-              <input type="number" min={1} className="input w-20" value={row.page} onChange={(e) => updateRow(index, { page: e.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>X (pt)</span>
-              <input type="number" className="input w-20" value={row.x} onChange={(e) => updateRow(index, { x: e.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Y (pt)</span>
-              <input type="number" className="input w-20" value={row.y} onChange={(e) => updateRow(index, { y: e.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Width (pt)</span>
-              <input type="number" className="input w-20" value={row.width} onChange={(e) => updateRow(index, { width: e.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Height (pt)</span>
-              <input type="number" className="input w-20" value={row.height} onChange={(e) => updateRow(index, { height: e.target.value })} />
-            </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="meta">
+              Page {row.page} — x={row.rect.x.toFixed(0)}, y={row.rect.y.toFixed(0)}, w={row.rect.width.toFixed(0)}, h=
+              {row.rect.height.toFixed(0)} pt
+            </span>
+            <button
+              type="button"
+              className="btn-quiet"
+              onClick={() => {
+                setPage(row.page);
+                setArmedIndex(index);
+              }}
+            >
+              {armedIndex === index ? "Drag on the page above…" : "Place on page"}
+            </button>
           </div>
 
           {EITHER.includes(row.type) ? (
@@ -244,11 +247,47 @@ export function SignTool(): React.ReactElement {
         </fieldset>
       ))}
 
-      <button type="button" className="btn-quiet self-start" onClick={() => setRows((current) => [...current, emptyRow()])}>
+      <button type="button" className="btn-quiet self-start" onClick={() => setRows((current) => [...current, emptyRow(page)])}>
         Add another element
       </button>
 
       {!allValid ? <p className="meta">Every element needs a valid page/box and either text or an image, per its type.</p> : null}
     </PdfToolShell>
+  );
+}
+
+interface SignOverlayProps {
+  canvasSizePx: Size;
+  pageSizePt: Size;
+  page: number;
+  rows: SignRow[];
+  armedIndex: number | null;
+  setArmedIndex: (index: number | null) => void;
+  updateRow: (index: number, patch: Partial<SignRow>) => void;
+}
+
+function SignOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArmedIndex, updateRow }: SignOverlayProps): React.ReactElement {
+  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null, (pixelRect) => {
+    if (armedIndex === null) return;
+    updateRow(armedIndex, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) });
+    setArmedIndex(null);
+  });
+
+  const onPage = rows.map((row, index) => ({ row, index })).filter(({ row }) => row.page === page);
+
+  return (
+    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0 }} {...handlers}>
+      {onPage.map(({ row, index }) => (
+        <PlacedBox
+          key={index}
+          rect={pointRectToPixelRect(row.rect, canvasSizePx, pageSizePt)}
+          label={`Element ${index + 1}`}
+          onChange={(pixelRect) => updateRow(index, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) })}
+        />
+      ))}
+      {draftRect ? (
+        <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #2563eb" }} />
+      ) : null}
+    </div>
   );
 }

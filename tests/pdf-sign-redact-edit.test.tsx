@@ -1,18 +1,31 @@
 /**
  * `/pdf/sign`, `/pdf/redact` and `/pdf/edit` — built on `usePdfFileTool` and
  * `PdfToolShell` like the single-file tools in `tests/pdf-tools-pages.test.tsx`,
- * but each also sends a JSON `elements`/`areas` text field alongside the file.
+ * but each also sends a JSON `elements`/`areas` text field alongside the file,
+ * built by placing boxes on a `pdf.js`-rendered page preview
+ * (`PdfPagePreview`) rather than typing numeric coordinates.
  *
  * As `tests/pdf-multi-tools.test.tsx` notes, jsdom's `FormData`/`XMLHttpRequest`
  * do not reliably preserve file bytes once intercepted by MSW in this test
  * environment, so file-part assertions here are limited to presence/count and
  * the JSON text fields are read back and parsed directly off the wire — those
  * survive intact.
+ *
+ * `pdf.js` itself is mocked here: jsdom has no real `<canvas>` 2D context or
+ * PDF parser, and the fixture "PDF" used across these tests is a handful of
+ * bytes, not a real document `pdf.js` could parse. The mock stands in for a
+ * one-page, 200x300pt document and answers `getViewport`/`render` the way the
+ * real library would, so `PdfPagePreview` renders its overlay at a known
+ * pixel size and the pixel -> point conversion in `lib/pdfCoords.ts` (already
+ * covered on its own in `tests/pdfCoords.test.ts`) runs for real here too.
+ * Actually dragging with a mouse can't be exercised beyond jsdom's simulated
+ * pointer events, but those are enough to drive `useNewRectDrag`/`PlacedBox`
+ * end to end, which is what each "drag on the page" test below does.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { EditTool } from "@/components/pdf/EditTool";
 import { RedactTool } from "@/components/pdf/RedactTool";
@@ -21,6 +34,23 @@ import { SignTool } from "@/components/pdf/SignTool";
 import { BASE, envelope } from "./msw/handlers";
 import { server } from "./msw/server";
 
+const PAGE_SIZE_PT = { width: 200, height: 300 };
+
+vi.mock("pdfjs-dist", () => {
+  const page = {
+    getViewport: ({ scale }: { scale: number }) => ({
+      width: PAGE_SIZE_PT.width * scale,
+      height: PAGE_SIZE_PT.height * scale,
+    }),
+    render: () => ({ promise: Promise.resolve() }),
+  };
+  const doc = { numPages: 1, getPage: async () => page };
+  return {
+    GlobalWorkerOptions: {},
+    getDocument: () => ({ promise: Promise.resolve(doc) }),
+  };
+});
+
 function pdfFile(name = "doc.pdf"): File {
   return new File(["%PDF-1.4 fake"], name, { type: "application/pdf" });
 }
@@ -28,6 +58,21 @@ function pdfFile(name = "doc.pdf"): File {
 async function choosePdf(user: ReturnType<typeof userEvent.setup>, name = "doc.pdf"): Promise<void> {
   const input = screen.getByLabelText(/Choose a file, or drop one here/) as HTMLInputElement;
   await user.upload(input, pdfFile(name));
+}
+
+/** Drags a rectangle on the mocked page preview's overlay, in canvas pixels. */
+async function dragOnOverlay(
+  user: ReturnType<typeof userEvent.setup>,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
+  const overlay = await screen.findByTestId("pdf-overlay");
+  await user.pointer([
+    { target: overlay, coords: { clientX: from.x, clientY: from.y } },
+    { keys: "[MouseLeft>]" },
+    { target: overlay, coords: { clientX: to.x, clientY: to.y } },
+    { keys: "[/MouseLeft]" },
+  ]);
 }
 
 /** A plain multipart text field's value, read straight off the raw body. */
@@ -60,6 +105,7 @@ describe("RedactTool", () => {
     const user = userEvent.setup();
     render(<RedactTool />);
     await choosePdf(user);
+    await dragOnOverlay(user, { x: 10, y: 10 }, { x: 60, y: 40 });
     await user.click(screen.getByRole("button", { name: "Run" }));
     await screen.findByRole("link", { name: /Download/ });
 
@@ -78,6 +124,7 @@ describe("RedactTool", () => {
     const user = userEvent.setup();
     render(<RedactTool />);
     await choosePdf(user);
+    await dragOnOverlay(user, { x: 10, y: 10 }, { x: 60, y: 40 });
     await user.click(screen.getByRole("button", { name: "Run" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(

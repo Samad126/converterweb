@@ -5,57 +5,43 @@
  * rectangles, not draw over it. `areas` is a non-empty JSON array of
  * `{page, x, y, width, height}`, top-left origin, in points.
  *
- * Coordinates are entered numerically rather than drawn on a page preview —
- * see the accompanying report for why (no `pdf.js` preview primitive was
- * built in this pass). Every field is validated client-side before submit.
+ * Areas are drawn directly on a rendered page preview (`PdfPagePreview`):
+ * drag across empty space to add one, drag its body to move it, drag its
+ * corner handle to resize it. The drag happens in screen-pixel space and is
+ * converted to PDF points via `lib/pdfCoords.ts`.
  */
 import { useState } from "react";
 
+import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
+import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdfCoords";
 import { usePdfFileTool } from "@/lib/usePdfFileTool";
 
 interface RedactArea {
-  page: string;
-  x: string;
-  y: string;
-  width: string;
-  height: string;
-}
-
-function emptyArea(): RedactArea {
-  return { page: "1", x: "0", y: "0", width: "100", height: "20" };
+  page: number;
+  rect: Rect; // PDF points, top-left origin.
 }
 
 export function RedactTool(): React.ReactElement {
   const tool = usePdfFileTool("/pdf/redact");
-  const [areas, setAreas] = useState<RedactArea[]>([emptyArea()]);
+  const [areas, setAreas] = useState<RedactArea[]>([]);
+  const [page, setPage] = useState(1);
 
-  const updateArea = (index: number, patch: Partial<RedactArea>): void => {
-    setAreas((current) => current.map((area, i) => (i === index ? { ...area, ...patch } : area)));
-  };
+  const validAreas = areas.filter((area) => area.rect.width > 0 && area.rect.height > 0);
 
-  const validAreas = areas
-    .map((area) => ({
-      page: Number(area.page),
-      x: Number(area.x),
-      y: Number(area.y),
-      width: Number(area.width),
-      height: Number(area.height),
-    }))
-    .filter(
-      (area) =>
-        Number.isFinite(area.page) &&
-        area.page >= 1 &&
-        Number.isFinite(area.x) &&
-        Number.isFinite(area.y) &&
-        area.width > 0 &&
-        area.height > 0,
-    );
+  function overlay(canvasSizePx: Size, pageSizePt: Size): React.ReactNode {
+    const onPage = areas
+      .map((area, index) => ({ area, index }))
+      .filter(({ area }) => area.page === page);
+
+    return <RedactOverlay canvasSizePx={canvasSizePx} pageSizePt={pageSizePt} page={page} areas={onPage} setAreas={setAreas} />;
+  }
 
   return (
     <PdfToolShell
       tool={tool}
-      onRun={() => tool.run([{ name: "areas", value: JSON.stringify(validAreas) }])}
+      onRun={() => tool.run([{ name: "areas", value: JSON.stringify(validAreas.map(({ page: p, rect }) => ({ page: p, ...rect }))) }])}
     >
       <p className="meta">
         Permanent removal — the text, images and graphics under each rectangle are deleted from the
@@ -63,73 +49,58 @@ export function RedactTool(): React.ReactElement {
         under-sized box leaves a readable fragment behind.
       </p>
 
-      {areas.map((area, index) => (
-        <fieldset key={index} className="panel flex flex-col gap-2">
-          <legend className="font-semibold">Area {index + 1}</legend>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex flex-col gap-1">
-              <span>Page</span>
-              <input
-                type="number"
-                min={1}
-                className="input w-24"
-                value={area.page}
-                onChange={(event) => updateArea(index, { page: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>X (pt)</span>
-              <input
-                type="number"
-                className="input w-24"
-                value={area.x}
-                onChange={(event) => updateArea(index, { x: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Y (pt)</span>
-              <input
-                type="number"
-                className="input w-24"
-                value={area.y}
-                onChange={(event) => updateArea(index, { y: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Width (pt)</span>
-              <input
-                type="number"
-                className="input w-24"
-                value={area.width}
-                onChange={(event) => updateArea(index, { width: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Height (pt)</span>
-              <input
-                type="number"
-                className="input w-24"
-                value={area.height}
-                onChange={(event) => updateArea(index, { height: event.target.value })}
-              />
-            </label>
-          </div>
-          <button
-            type="button"
-            className="btn-quiet self-start"
-            onClick={() => setAreas((current) => current.filter((_, i) => i !== index))}
-            disabled={areas.length === 1}
-          >
-            Remove area
-          </button>
-        </fieldset>
-      ))}
+      <p className="meta">Drag across the page below to mark an area for redaction. Drag a box&apos;s body to move it, its corner to resize it.</p>
 
-      <button type="button" className="btn-quiet self-start" onClick={() => setAreas((current) => [...current, emptyArea()])}>
-        Add another area
-      </button>
+      <PdfPagePreview file={tool.file} page={page} onPageChange={setPage} overlay={overlay} />
+
+      <ul className="flex flex-col gap-1">
+        {areas.map((area, index) => (
+          <li key={index} className="meta flex items-center gap-2">
+            Area {index + 1} — page {area.page}: x={area.rect.x.toFixed(1)}, y={area.rect.y.toFixed(1)}, w=
+            {area.rect.width.toFixed(1)}, h={area.rect.height.toFixed(1)}
+            <button type="button" className="btn-quiet" onClick={() => setAreas((current) => current.filter((_, i) => i !== index))}>
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
 
       {validAreas.length === 0 ? <p className="meta">At least one area with a positive width and height is required.</p> : null}
     </PdfToolShell>
+  );
+}
+
+interface RedactOverlayProps {
+  canvasSizePx: Size;
+  pageSizePt: Size;
+  page: number;
+  areas: { area: RedactArea; index: number }[];
+  setAreas: React.Dispatch<React.SetStateAction<RedactArea[]>>;
+}
+
+function RedactOverlay({ canvasSizePx, pageSizePt, page, areas, setAreas }: RedactOverlayProps): React.ReactElement {
+  const { containerRef, draftRect, handlers } = useNewRectDrag(true, (pixelRect) => {
+    const rect = pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt);
+    setAreas((current) => [...current, { page, rect }]);
+  });
+
+  return (
+    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0 }} {...handlers}>
+      {areas.map(({ area, index }) => (
+        <PlacedBox
+          key={index}
+          rect={pointRectToPixelRect(area.rect, canvasSizePx, pageSizePt)}
+          color="#dc2626"
+          label={`Area ${index + 1}`}
+          onChange={(pixelRect) =>
+            setAreas((current) =>
+              current.map((a, i) => (i === index ? { ...a, rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) } : a)),
+            )
+          }
+          onRemove={() => setAreas((current) => current.filter((_, i) => i !== index))}
+        />
+      ))}
+      {draftRect ? <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #dc2626" }} /> : null}
+    </div>
   );
 }

@@ -6,14 +6,26 @@
  * page positions. Same VISUAL-mark caveat as `/pdf/sign` — this bakes pixels
  * into the page content, it is not an editable annotation layer.
  *
- * Positions are entered numerically rather than dragged on a rendered page
- * preview — see the accompanying report for why a `pdf.js` preview primitive
- * was not built in this pass. Freehand strokes are entered as a typed list of
- * `x,y` points, the same coordinate contract the schema documents.
+ * Positions are placed on a rendered page preview (`PdfPagePreview`) rather
+ * than typed as numbers: text/image/rectangle/ellipse/line are a dragged box
+ * (a line uses the box's two opposite corners as its endpoints); freehand is
+ * captured as an actual pointer-drag path, recorded as a `points` array in
+ * PDF points — the same coordinate contract the schema documents.
  */
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
+import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
+import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import {
+  pagePointToPixelPoint,
+  pixelPointToPagePoint,
+  pixelRectToPointRect,
+  pointRectToPixelRect,
+  type Point,
+  type Rect,
+  type Size,
+} from "@/lib/pdfCoords";
 import { usePdfFileTool } from "@/lib/usePdfFileTool";
 import type { PdfPart } from "@/lib/pdfApi";
 
@@ -21,127 +33,90 @@ type EditElementType = "text" | "image" | "rectangle" | "ellipse" | "line" | "fr
 
 interface EditRow {
   type: EditElementType;
-  page: string;
-  // text
-  x: string;
-  y: string;
+  page: number;
+  // text/image/rectangle/ellipse; line uses the corners as its two endpoints.
+  rect: Rect;
   value: string;
   fontSize: string;
-  // image / rectangle / ellipse
-  width: string;
-  height: string;
   imageIndex: number | null;
-  // rectangle / ellipse / line / freehand
   color: string;
   strokeWidth: string;
   fill: boolean;
-  // line
-  x1: string;
-  y1: string;
-  x2: string;
-  y2: string;
-  // freehand
-  points: string;
+  // freehand, in PDF points.
+  points: Point[];
 }
 
-function emptyRow(): EditRow {
+function emptyRow(page: number): EditRow {
   return {
     type: "text",
-    page: "1",
-    x: "72",
-    y: "700",
+    page,
+    rect: { x: 72, y: 700, width: 120, height: 40 },
     value: "",
     fontSize: "14",
-    width: "120",
-    height: "40",
     imageIndex: null,
     color: "black",
     strokeWidth: "2",
     fill: false,
-    x1: "72",
-    y1: "400",
-    x2: "220",
-    y2: "400",
-    points: "72,350 90,360 110,345",
+    points: [],
   };
-}
-
-function parsePoints(raw: string): { x: number; y: number }[] | null {
-  const parts = raw
-    .split(/\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s !== "");
-  const points = parts.map((part) => {
-    const [xStr, yStr] = part.split(",");
-    return { x: Number(xStr), y: Number(yStr) };
-  });
-  if (points.length < 2) return null;
-  if (points.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y))) return null;
-  return points;
 }
 
 export function EditTool(): React.ReactElement {
   const tool = usePdfFileTool("/pdf/edit");
-  const [rows, setRows] = useState<EditRow[]>([emptyRow()]);
+  const [rows, setRows] = useState<EditRow[]>([emptyRow(1)]);
   const [images, setImages] = useState<File[]>([]);
+  const [page, setPage] = useState(1);
+  const [armedIndex, setArmedIndex] = useState<number | null>(null);
 
   const updateRow = (index: number, patch: Partial<EditRow>): void => {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
 
   function buildElement(row: EditRow): Record<string, unknown> | null {
-    const page = Number(row.page);
-    if (!Number.isFinite(page) || page < 1) return null;
+    const { page: p, rect } = row;
+    if (!Number.isFinite(p) || p < 1) return null;
 
     if (row.type === "text") {
       if (row.value.trim() === "") return null;
-      const x = Number(row.x);
-      const y = Number(row.y);
       const fontSize = Number(row.fontSize);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-      return { type: "text", page, x, y, value: row.value, fontSize: Number.isFinite(fontSize) ? fontSize : 14, color: row.color };
+      return { type: "text", page: p, x: rect.x, y: rect.y, value: row.value, fontSize: Number.isFinite(fontSize) ? fontSize : 14, color: row.color };
     }
     if (row.type === "image") {
-      const x = Number(row.x);
-      const y = Number(row.y);
-      const width = Number(row.width);
-      const height = Number(row.height);
-      if (!Number.isFinite(x) || !Number.isFinite(y) || width <= 0 || height <= 0) return null;
-      if (row.imageIndex === null) return null;
-      return { type: "image", page, x, y, width, height, imageIndex: row.imageIndex };
+      if (rect.width <= 0 || rect.height <= 0 || row.imageIndex === null) return null;
+      return { type: "image", page: p, x: rect.x, y: rect.y, width: rect.width, height: rect.height, imageIndex: row.imageIndex };
     }
     if (row.type === "rectangle" || row.type === "ellipse") {
-      const x = Number(row.x);
-      const y = Number(row.y);
-      const width = Number(row.width);
-      const height = Number(row.height);
+      if (rect.width <= 0 || rect.height <= 0) return null;
       const strokeWidth = Number(row.strokeWidth);
-      if (!Number.isFinite(x) || !Number.isFinite(y) || width <= 0 || height <= 0) return null;
       return {
         type: row.type,
-        page,
-        x,
-        y,
-        width,
-        height,
+        page: p,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
         color: row.color,
         strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2,
         fill: row.fill,
       };
     }
     if (row.type === "line") {
-      const x1 = Number(row.x1);
-      const y1 = Number(row.y1);
-      const x2 = Number(row.x2);
-      const y2 = Number(row.y2);
       const strokeWidth = Number(row.strokeWidth);
-      if (![x1, y1, x2, y2].every(Number.isFinite)) return null;
-      return { type: "line", page, x1, y1, x2, y2, color: row.color, strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2 };
+      return {
+        type: "line",
+        page: p,
+        x1: rect.x,
+        y1: rect.y,
+        x2: rect.x + rect.width,
+        y2: rect.y + rect.height,
+        color: row.color,
+        strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2,
+      };
     }
     // freehand
-    const points = parsePoints(row.points);
-    if (points === null) return null;
-    return { type: "freehand", page, points, color: row.color, strokeWidth: Number(row.strokeWidth) || 2 };
+    if (row.points.length < 2) return null;
+    const strokeWidth = Number(row.strokeWidth);
+    return { type: "freehand", page: p, points: row.points, color: row.color, strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2 };
   }
 
   const elements = rows.map(buildElement);
@@ -154,6 +129,20 @@ export function EditTool(): React.ReactElement {
     ];
     tool.run(parts);
   };
+
+  function overlay(canvasSizePx: Size, pageSizePt: Size): React.ReactNode {
+    return (
+      <EditOverlay
+        canvasSizePx={canvasSizePx}
+        pageSizePt={pageSizePt}
+        page={page}
+        rows={rows}
+        armedIndex={armedIndex}
+        setArmedIndex={setArmedIndex}
+        updateRow={updateRow}
+      />
+    );
+  }
 
   return (
     <PdfToolShell tool={tool} onRun={onRun}>
@@ -185,6 +174,8 @@ export function EditTool(): React.ReactElement {
         ) : null}
       </section>
 
+      <PdfPagePreview file={tool.file} page={page} onPageChange={setPage} overlay={overlay} />
+
       {rows.map((row, index) => (
         <fieldset key={index} className="panel flex flex-col gap-2">
           <legend className="font-semibold">Element {index + 1}</legend>
@@ -201,95 +192,71 @@ export function EditTool(): React.ReactElement {
                 <option value="freehand">Freehand</option>
               </select>
             </label>
-            <label className="flex flex-col gap-1">
-              <span>Page</span>
-              <input type="number" min={1} className="input w-20" value={row.page} onChange={(e) => updateRow(index, { page: e.target.value })} />
-            </label>
+            <div className="flex flex-col gap-1 justify-end">
+              <span className="meta">
+                Page {row.page}
+                {row.type === "freehand"
+                  ? ` — ${row.points.length} point${row.points.length === 1 ? "" : "s"}`
+                  : ` — x=${row.rect.x.toFixed(0)}, y=${row.rect.y.toFixed(0)}, w=${row.rect.width.toFixed(0)}, h=${row.rect.height.toFixed(0)} pt`}
+              </span>
+              <button
+                type="button"
+                className="btn-quiet self-start"
+                onClick={() => {
+                  setPage(row.page);
+                  setArmedIndex(index);
+                }}
+              >
+                {armedIndex === index
+                  ? row.type === "freehand"
+                    ? "Draw on the page above…"
+                    : "Drag on the page above…"
+                  : row.type === "freehand"
+                    ? "Draw on page"
+                    : "Place on page"}
+              </button>
+            </div>
           </div>
 
           {row.type === "text" ? (
-            <>
-              <div className="flex gap-3">
-                <label className="flex flex-col gap-1">
-                  <span>X (pt)</span>
-                  <input type="number" className="input w-20" value={row.x} onChange={(e) => updateRow(index, { x: e.target.value })} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span>Y (pt)</span>
-                  <input type="number" className="input w-20" value={row.y} onChange={(e) => updateRow(index, { y: e.target.value })} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span>Font size</span>
-                  <input type="number" className="input w-20" value={row.fontSize} onChange={(e) => updateRow(index, { fontSize: e.target.value })} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span>Color</span>
-                  <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
-                </label>
-              </div>
+            <div className="flex gap-3">
               <label className="flex flex-col gap-1">
+                <span>Font size</span>
+                <input type="number" className="input w-20" value={row.fontSize} onChange={(e) => updateRow(index, { fontSize: e.target.value })} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span>Color</span>
+                <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
                 <span>Text</span>
                 <input type="text" className="input" value={row.value} onChange={(e) => updateRow(index, { value: e.target.value })} />
-              </label>
-            </>
-          ) : null}
-
-          {row.type === "image" ? (
-            <div className="flex flex-wrap gap-3">
-              <label className="flex flex-col gap-1">
-                <span>X (pt)</span>
-                <input type="number" className="input w-20" value={row.x} onChange={(e) => updateRow(index, { x: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Y (pt)</span>
-                <input type="number" className="input w-20" value={row.y} onChange={(e) => updateRow(index, { y: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Width (pt)</span>
-                <input type="number" className="input w-20" value={row.width} onChange={(e) => updateRow(index, { width: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Height (pt)</span>
-                <input type="number" className="input w-20" value={row.height} onChange={(e) => updateRow(index, { height: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Image</span>
-                <select
-                  className="input"
-                  value={row.imageIndex ?? ""}
-                  onChange={(e) => updateRow(index, { imageIndex: e.target.value === "" ? null : Number(e.target.value) })}
-                >
-                  <option value="" disabled>
-                    Choose an uploaded image…
-                  </option>
-                  {images.map((image, i) => (
-                    <option key={i} value={i}>
-                      {i}. {image.name}
-                    </option>
-                  ))}
-                </select>
               </label>
             </div>
           ) : null}
 
+          {row.type === "image" ? (
+            <label className="flex flex-col gap-1">
+              <span>Image</span>
+              <select
+                className="input"
+                value={row.imageIndex ?? ""}
+                onChange={(e) => updateRow(index, { imageIndex: e.target.value === "" ? null : Number(e.target.value) })}
+              >
+                <option value="" disabled>
+                  Choose an uploaded image…
+                </option>
+                {images.map((image, i) => (
+                  <option key={i} value={i}>
+                    {i}. {image.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           {row.type === "rectangle" || row.type === "ellipse" ? (
             <div className="flex flex-wrap gap-3">
-              <label className="flex flex-col gap-1">
-                <span>X (pt)</span>
-                <input type="number" className="input w-20" value={row.x} onChange={(e) => updateRow(index, { x: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Y (pt)</span>
-                <input type="number" className="input w-20" value={row.y} onChange={(e) => updateRow(index, { y: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Width (pt)</span>
-                <input type="number" className="input w-20" value={row.width} onChange={(e) => updateRow(index, { width: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Height (pt)</span>
-                <input type="number" className="input w-20" value={row.height} onChange={(e) => updateRow(index, { height: e.target.value })} />
-              </label>
               <label className="flex flex-col gap-1">
                 <span>Color</span>
                 <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
@@ -308,22 +275,6 @@ export function EditTool(): React.ReactElement {
           {row.type === "line" ? (
             <div className="flex flex-wrap gap-3">
               <label className="flex flex-col gap-1">
-                <span>X1 (pt)</span>
-                <input type="number" className="input w-20" value={row.x1} onChange={(e) => updateRow(index, { x1: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Y1 (pt)</span>
-                <input type="number" className="input w-20" value={row.y1} onChange={(e) => updateRow(index, { y1: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>X2 (pt)</span>
-                <input type="number" className="input w-20" value={row.x2} onChange={(e) => updateRow(index, { x2: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span>Y2 (pt)</span>
-                <input type="number" className="input w-20" value={row.y2} onChange={(e) => updateRow(index, { y2: e.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1">
                 <span>Color</span>
                 <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
               </label>
@@ -335,21 +286,15 @@ export function EditTool(): React.ReactElement {
           ) : null}
 
           {row.type === "freehand" ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-3">
               <label className="flex flex-col gap-1">
-                <span>Points — space-separated `x,y` pairs, in points, at least two</span>
-                <input type="text" className="input" value={row.points} onChange={(e) => updateRow(index, { points: e.target.value })} />
+                <span>Color</span>
+                <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
               </label>
-              <div className="flex gap-3">
-                <label className="flex flex-col gap-1">
-                  <span>Color</span>
-                  <input type="text" className="input w-24" value={row.color} onChange={(e) => updateRow(index, { color: e.target.value })} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span>Stroke width</span>
-                  <input type="number" className="input w-20" value={row.strokeWidth} onChange={(e) => updateRow(index, { strokeWidth: e.target.value })} />
-                </label>
-              </div>
+              <label className="flex flex-col gap-1">
+                <span>Stroke width</span>
+                <input type="number" className="input w-20" value={row.strokeWidth} onChange={(e) => updateRow(index, { strokeWidth: e.target.value })} />
+              </label>
             </div>
           ) : null}
 
@@ -359,11 +304,132 @@ export function EditTool(): React.ReactElement {
         </fieldset>
       ))}
 
-      <button type="button" className="btn-quiet self-start" onClick={() => setRows((current) => [...current, emptyRow()])}>
+      <button type="button" className="btn-quiet self-start" onClick={() => setRows((current) => [...current, emptyRow(page)])}>
         Add another element
       </button>
 
-      {!allValid ? <p className="meta">Every element needs valid, complete coordinates for its type.</p> : null}
+      {!allValid ? <p className="meta">Every element needs a valid, complete placement for its type.</p> : null}
     </PdfToolShell>
   );
+}
+
+interface EditOverlayProps {
+  canvasSizePx: Size;
+  pageSizePt: Size;
+  page: number;
+  rows: EditRow[];
+  armedIndex: number | null;
+  setArmedIndex: (index: number | null) => void;
+  updateRow: (index: number, patch: Partial<EditRow>) => void;
+}
+
+function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArmedIndex, updateRow }: EditOverlayProps): React.ReactElement {
+  const armedRow = armedIndex !== null ? rows[armedIndex] : null;
+  const isFreehandArmed = armedRow?.type === "freehand";
+
+  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null && !isFreehandArmed, (pixelRect) => {
+    if (armedIndex === null) return;
+    updateRow(armedIndex, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) });
+    setArmedIndex(null);
+  });
+
+  const freehand = useFreehandDrag(isFreehandArmed, (pixelPoints) => {
+    if (armedIndex === null) return;
+    updateRow(armedIndex, { points: pixelPoints.map((p) => pixelPointToPagePoint(p, canvasSizePx, pageSizePt)) });
+    setArmedIndex(null);
+  });
+
+  const onPage = rows.map((row, index) => ({ row, index })).filter(({ row }) => row.page === page);
+
+  return (
+    <div
+      ref={isFreehandArmed ? freehand.containerRef : containerRef}
+      data-testid="pdf-overlay"
+      style={{ position: "absolute", inset: 0 }}
+      {...(isFreehandArmed ? freehand.handlers : handlers)}
+    >
+      {onPage.map(({ row, index }) =>
+        row.type === "freehand" ? (
+          row.points.length >= 2 ? (
+            <FreehandPreview key={index} points={row.points} canvasSizePx={canvasSizePx} pageSizePt={pageSizePt} color={row.color} />
+          ) : null
+        ) : (
+          <PlacedBox
+            key={index}
+            rect={pointRectToPixelRect(row.rect, canvasSizePx, pageSizePt)}
+            label={`Element ${index + 1}`}
+            onChange={(pixelRect) => updateRow(index, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) })}
+          />
+        ),
+      )}
+      {draftRect ? (
+        <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #2563eb" }} />
+      ) : null}
+      {freehand.draftPoints.length >= 2 ? (
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+          <polyline
+            points={freehand.draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+            fill="none"
+            stroke="#2563eb"
+            strokeWidth={2}
+          />
+        </svg>
+      ) : null}
+    </div>
+  );
+}
+
+function FreehandPreview({ points, canvasSizePx, pageSizePt, color }: { points: Point[]; canvasSizePx: Size; pageSizePt: Size; color: string }): React.ReactElement {
+  const pixelPoints = points.map((p) => pagePointToPixelPoint(p, canvasSizePx, pageSizePt));
+  return (
+    <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+      <polyline points={pixelPoints.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={color === "black" ? "#000" : color} strokeWidth={2} />
+    </svg>
+  );
+}
+
+function useFreehandDrag(active: boolean, onCommit: (points: Point[]) => void) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [draftPoints, setDraftPoints] = useState<Point[]>([]);
+  const drawingRef = useRef(false);
+
+  const pointFromEvent = useCallback((event: React.PointerEvent): Point | null => {
+    const container = containerRef.current;
+    if (!container) return null;
+    const box = container.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  }, []);
+
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!active || event.target !== event.currentTarget) return;
+      const point = pointFromEvent(event);
+      if (!point) return;
+      drawingRef.current = true;
+      setDraftPoints([point]);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    },
+    [active, pointFromEvent],
+  );
+
+  const onPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!drawingRef.current) return;
+      const point = pointFromEvent(event);
+      if (!point) return;
+      setDraftPoints((current) => [...current, point]);
+    },
+    [pointFromEvent],
+  );
+
+  const onPointerUp = useCallback(() => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    setDraftPoints((current) => {
+      if (current.length >= 2) onCommit(current);
+      return [];
+    });
+  }, [onCommit]);
+
+  return { containerRef, draftPoints, handlers: { onPointerDown, onPointerMove, onPointerUp } };
 }
