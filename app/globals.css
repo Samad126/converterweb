@@ -148,11 +148,27 @@
     padding: 20px;
   }
 
-  /* The inverted block: a result the page wants you to look at. */
+  /*
+   * The inverted block: a result the page wants you to look at.
+   *
+   * `--ink`/`--rule`/`--surface` are re-scoped here, not just `--focus`. Every
+   * token below them normally flips with `prefers-color-scheme`, but this
+   * block is *already* the inversion — its own background is `--surface-strong`
+   * (light mode: black: dark mode: white), the opposite of whatever the page
+   * around it is doing. A descendant that reads the page-level `--ink` or
+   * `--rule` straight (a quiet button's text, a divider) ends up painting
+   * itself the same colour as this block's own background, in both themes.
+   * `color-mix()` against `currentColor` sidesteps the flip entirely: it reads
+   * as "a little of my own foreground, over my own background" regardless of
+   * which theme put which colour where, so it never needs to know.
+   */
   .panel-strong {
     background-color: var(--surface-strong);
     color: var(--on-surface-strong);
     --focus: var(--on-surface-strong);
+    --ink: var(--on-surface-strong);
+    --rule: color-mix(in srgb, currentColor 30%, transparent);
+    --surface: color-mix(in srgb, currentColor 12%, transparent);
     padding: 20px;
   }
 
@@ -273,6 +289,38 @@
     gap: 12px;
     padding: 12px 16px;
     border: 1px solid var(--rule);
+  }
+
+  /*
+   * One row in a list of files: a chosen file waiting to run, or one input's
+   * outcome once a batch has finished. `.file-row`'s layout, tightened for
+   * repetition — every one of its callers puts a `.file-name`, a `.meta`, and
+   * either a `.btn-quiet` action or a `.notice` failure into it, so those are
+   * sized for the row here rather than left at their standalone scale.
+   */
+  .chosen-file {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--rule);
+  }
+
+  .chosen-file .file-name {
+    flex: 1 1 auto;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .chosen-file .meta,
+  .chosen-file .btn-quiet {
+    flex: 0 0 auto;
+  }
+
+  .chosen-file .notice {
+    flex: 1 1 100%;
+    padding: 8px 10px;
   }
 
   /* Base size only. The result state overrides it with a type-scale utility,
@@ -1251,5 +1299,63 @@
     padding-top: 20px;
     border-top: 1px solid var(--rule);
     max-width: 80ch;
+  }
+
+  /*
+   * ToolSearch — a placeholder shell, not the redesign's search surface.
+   * Kept intentionally minimal: layout and legibility only, so nothing here
+   * has to be unpicked when Phase 3 gives this a real visual treatment.
+   */
+  .tool-search {
+    position: relative;
+  }
+
+  .tool-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--rule);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .tool-search-input:disabled {
+    color: var(--muted);
+  }
+
+  .tool-search-listbox {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    border: 1px solid var(--rule-strong);
+    background-color: var(--paper);
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .tool-search-option {
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
+  .tool-search-option[data-active="true"] {
+    background-color: var(--surface);
+    font-weight: 600;
+  }
+
+  .tool-search-empty {
+    padding: 10px 12px;
+    color: var(--muted);
+  }
+
+  .tool-search-empty a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 }

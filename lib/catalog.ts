@@ -886,3 +886,33 @@ export const POPULAR: readonly ConversionEntry[] = POPULAR_SLUGS.map((slug) => {
   if (!entry) throw new Error(`catalog: POPULAR_SLUGS names unknown slug "${slug}"`);
   return entry;
 });
+
+/**
+ * The two `/tools/*` pages that are neither a catalog pair nor a `/pdf/*`
+ * tool: `extract-tables` and `psd-to-layers` (see the note at the top of each
+ * page). Named here, alongside the pages, rather than at their one other
+ * caller (`lib/search/buildIndex.ts`) — the extensions are editorial content,
+ * exactly like everything else in this file, and `tests/matrix.test.tsx`
+ * exempts this file for that reason rather than needing a second exemption.
+ */
+export interface ExtraTool {
+  id: string;
+  label: string;
+  route: string;
+  extensions: readonly string[];
+}
+
+export const EXTRA_TOOLS: readonly ExtraTool[] = [
+  {
+    id: "extract-tables",
+    label: "Extract tables from Word",
+    route: "/tools/extract-tables",
+    extensions: [".docx", ".docm"],
+  },
+  {
+    id: "psd-to-layers",
+    label: "PSD to layers",
+    route: "/tools/psd-to-layers",
+    extensions: [".psd"],
+  },
+];
