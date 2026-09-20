@@ -26,8 +26,16 @@ export interface FormatPickerProps {
   /** The radio group's name. Unique per picker instance. */
   name: string;
   formats: FormatsResponse;
-  /** The source implied by the chosen file, or `null` before one is chosen. */
-  source: SourceFormat | null;
+  /**
+   * The source implied by every chosen file. Empty before a file is chosen.
+   *
+   * In bulk mode this can name more than one source at once: the contract is
+   * explicit that a file which cannot reach the target does not stop the rest
+   * of the batch, so a target is offered as soon as *any* chosen file can
+   * reach it, and a mismatched file among several is a per-file failure to
+   * report after the request rather than a reason to disable the target here.
+   */
+  sources: readonly SourceFormat[];
   selected: TargetId | null;
   /** True while a conversion is running: everything goes inert. */
   inert: boolean;
@@ -37,7 +45,7 @@ export interface FormatPickerProps {
 export function FormatPicker({
   name,
   formats,
-  source,
+  sources,
   selected,
   inert,
   onSelect,
@@ -48,13 +56,13 @@ export function FormatPicker({
 
       <div className="picker">
         {formats.targets.map((target) => {
-          const reachable = source !== null && isReachable(source, target.id);
+          const reachable = sources.some((source) => isReachable(source, target.id));
           const isSelected = reachable && selected === target.id;
 
           // Read out of the matrix, never written down here: when the service
           // grows a source that can make this target, the sentence follows.
           const meta = !reachable
-            ? source === null
+            ? sources.length === 0
               ? NO_SOURCE_REASON
               : unreachableReason(formats, target.id)
             : target.multiple

@@ -67,6 +67,19 @@ export function dropFile(name: string, bytes = 64): File {
   return file;
 }
 
+/** Hand several files to the input in one gesture, the way a multi-select dialog does. */
+export async function chooseFiles(
+  user: UserEvent,
+  names: readonly string[],
+  bytes = 64,
+): Promise<File[]> {
+  const files = names.map(
+    (name) => new File([new Uint8Array(bytes)], name, { type: "application/octet-stream" }),
+  );
+  await user.upload(fileInput(), files);
+  return files;
+}
+
 /** A file of exactly `size` bytes, for the limit tests. */
 export async function chooseFileOfSize(
   user: UserEvent,
