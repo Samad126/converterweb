@@ -1671,6 +1671,13 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--muted);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 480px) {
+    .stat-label {
+      font-size: 10px;
+    }
   }
 
   /* ======================================================================= */
