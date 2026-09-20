@@ -33,7 +33,7 @@ export default function ConversionsPage(): React.ReactElement {
   ] as const;
 
   return (
-    <main id="content" className="mx-auto w-full max-w-[1100px] px-5 py-10 sm:py-14">
+    <main id="content" className="shell py-10 sm:py-14">
       <JsonLd document={itemList(CATALOG)} />
       <JsonLd document={breadcrumbList(crumbs)} />
 

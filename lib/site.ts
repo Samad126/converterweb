@@ -30,6 +30,22 @@ const PRODUCTION_ORIGIN = "https://converter.alakbaroff.com";
  */
 export const SITE_NAME = "File Converter";
 
+/**
+ * Who built this, and where the two repositories that make it up live.
+ *
+ * One place, read by both `/about` and the footer, so the links can never
+ * drift between the two.
+ */
+export const AUTHOR = {
+  name: "Samad Alakbarov",
+  role: "Software Engineer",
+  githubFrontend: "https://github.com/Samad126/converterweb",
+  githubBackend: "https://github.com/Samad126/converterapi",
+  email: "samad.a.alakbarov@gmail.com",
+  linkedin: "https://www.linkedin.com/in/samad-alakbarov/",
+  portfolio: "https://alakbaroff.com",
+} as const;
+
 /** The site's origin, without a trailing slash. */
 export function siteOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();

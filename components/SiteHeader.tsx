@@ -15,10 +15,11 @@
  * query are deliberately independent, so a filtered homepage view doesn't
  * fight a header search on the same page for one query string.
  *
- * These links keep `next/link`'s default prefetch: there are five of them,
- * they are above the fold on every page, and preloading them is what makes
- * moving around the site feel immediate. `ToolsMenu`'s panel and the footer,
- * which carry the full catalog, opt out — see `ToolCard`.
+ * These links keep `next/link`'s default prefetch: there are four of them
+ * (three popular conversions plus `/about`), they are above the fold on every
+ * page, and preloading them is what makes moving around the site feel
+ * immediate. `ToolsMenu`'s panel and the footer, which carry the full
+ * catalog, opt out — see `ToolCard`.
  *
  * `ToolsMenu` is the one interactive piece of navigation, a click-toggled
  * mega menu grouped by `lib/categories.ts` — see its own doc comment for why
@@ -61,12 +62,13 @@ export function SiteHeader(): React.ReactElement {
         </div>
 
         <nav className="site-nav" aria-label="Conversions">
-          {POPULAR.slice(0, 4).map((entry) => (
+          {POPULAR.slice(0, 3).map((entry) => (
             <Link key={entry.slug} href={`/${entry.slug}`}>
               {entry.heading}
             </Link>
           ))}
           <ToolsMenu />
+          <Link href="/about">About</Link>
         </nav>
 
         <MobileHeaderControls />

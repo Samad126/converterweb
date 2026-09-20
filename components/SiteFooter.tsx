@@ -18,6 +18,7 @@ import Link from "next/link";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { entriesByFamily } from "@/lib/catalog";
 import { formatBytes } from "@/lib/format";
+import { AUTHOR } from "@/lib/site";
 
 const SERVER_TIMEOUT_SECONDS = 90;
 const CLIENT_TIMEOUT_SECONDS = 120;
@@ -53,6 +54,35 @@ export function SiteFooter(): React.ReactElement {
               </li>
               <li>
                 <Link href="/">Home</Link>
+              </li>
+              <li>
+                <Link href="/about">About</Link>
+              </li>
+            </ul>
+          </nav>
+
+          <nav aria-label="About the author">
+            <h2 className="footer-heading">{AUTHOR.name}</h2>
+            <ul className="footer-list">
+              <li>
+                <a href={AUTHOR.githubFrontend} target="_blank" rel="noopener noreferrer">
+                  Frontend on GitHub
+                </a>
+              </li>
+              <li>
+                <a href={AUTHOR.githubBackend} target="_blank" rel="noopener noreferrer">
+                  Backend on GitHub
+                </a>
+              </li>
+              <li>
+                <a href={AUTHOR.portfolio} target="_blank" rel="noopener noreferrer">
+                  Portfolio
+                </a>
+              </li>
+              <li>
+                <a href={AUTHOR.linkedin} target="_blank" rel="noopener noreferrer">
+                  LinkedIn
+                </a>
               </li>
             </ul>
           </nav>

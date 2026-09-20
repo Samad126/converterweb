@@ -121,6 +121,16 @@ export function MobileHeaderControls(): React.ReactElement {
               </Link>
             </div>
           ))}
+
+          <div className="mobile-nav-group">
+            <ul className="mobile-nav-list">
+              <li>
+                <Link href="/about" onClick={() => setPanel(null)}>
+                  About
+                </Link>
+              </li>
+            </ul>
+          </div>
         </nav>
       ) : null}
     </div>
