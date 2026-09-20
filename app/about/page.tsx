@@ -28,12 +28,22 @@ export default function AboutPage(): React.ReactElement {
       <section className="mt-12 flex flex-col gap-4">
         <h2 className="section-title">How it&rsquo;s built</h2>
         <p className="body-text">
-          The service (<code>converterapi</code>) is a Node.js backend that
-          converts through LibreOffice headless, with no database and no
-          stored state — every file is handled in a temporary workspace that
-          is deleted before the response is sent. It began as the backend for
-          an Android app that uploads a Word document and gets a PDF back, and
-          that contract still holds today.
+          The service (<code>converterapi</code>) is a Node.js backend with no
+          database and no stored state — every file is handled in a temporary
+          workspace that is deleted before the response is sent. It began as
+          the backend for an Android app that uploads a Word document and gets
+          a PDF back, and that contract still holds today.
+        </p>
+        <p className="body-text">
+          LibreOffice headless does the core document conversions, but it is
+          not the only engine: PDF page operations (merge, split, rotate,
+          watermark and the rest) run on <code>pdf-lib</code>, PDF pages are
+          rasterized with poppler&rsquo;s <code>pdftoppm</code>, password
+          protection uses <code>qpdf</code>, a PDF exporting to Word,
+          PowerPoint, Excel or Markdown goes through a separate Python engine
+          LibreOffice has no filter for, PSD layer extraction uses{" "}
+          <code>ag-psd</code>, and OCR runs through <code>ocrmypdf</code> and
+          Tesseract. Each tool uses whichever of these actually does that job.
         </p>
         <p className="body-text">
           This site (<code>converterweb</code>) is the browser client: Next.js
