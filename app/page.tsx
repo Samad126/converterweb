@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { CategorySection } from "@/components/CategorySection";
@@ -73,9 +74,9 @@ export default function HomePage(): React.ReactElement {
             </Suspense>
           </div>
           <p className="hero-actions">
-            <a className="btn hero-cta" href="#tools">
-              Browse every tool by category
-            </a>
+            <Link className="btn hero-cta" href="/conversions">
+              Browse all conversions
+            </Link>
           </p>
 
           {/* Counted, never written down: both figures come from the same
