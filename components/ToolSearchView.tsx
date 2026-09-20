@@ -7,7 +7,7 @@
  * as it is handed a controller.
  */
 import Link from "next/link";
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { ToolSearchController } from "@/lib/search/useToolSearchController";
 
@@ -29,8 +29,46 @@ export function ToolSearchView({
   const inputId = useId();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { query, setQuery, results, open, activeIndex, setActiveIndex, onKeyDown, select, statusText } =
     controller;
+
+  // `open` is purely query-derived, so it stays true after a click outside the
+  // combobox unless something here closes it. This is that something: a click
+  // anywhere but the input or the listbox dismisses the list, and typing or
+  // refocusing the input brings it back.
+  const [dismissed, setDismissed] = useState(false);
+
+  // The catalog failing to load has nothing to do with the query, so `open`
+  // (query-derived) never covers it — this tracks "has this input been
+  // focused at least once", which is what lets the error surface the moment
+  // someone reaches the box, the same way a normal empty-query focus would
+  // show a hint, rather than only after they start typing into a search that
+  // can never return anything.
+  const [touched, setTouched] = useState(false);
+
+  const showList = !dismissed && (errored ? touched : open);
+
+  useEffect(() => {
+    if (!showList) return;
+
+    function onPointerDown(event: MouseEvent): void {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setDismissed(true);
+      }
+    }
+
+    function onDocumentKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") setDismissed(true);
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onDocumentKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onDocumentKeyDown);
+    };
+  }, [showList]);
 
   const activeId = activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
@@ -41,7 +79,7 @@ export function ToolSearchView({
       : statusText;
 
   return (
-    <div className="tool-search">
+    <div className="tool-search" ref={containerRef}>
       <label htmlFor={inputId} className="sr-only">
         Search tools and conversions
       </label>
@@ -50,15 +88,22 @@ export function ToolSearchView({
         id={inputId}
         type="text"
         role="combobox"
-        aria-expanded={open}
+        aria-expanded={showList}
         aria-controls={listboxId}
         aria-activedescendant={activeId}
         aria-autocomplete="list"
         autoComplete="off"
         placeholder={placeholder}
         value={query}
-        disabled={loading || errored}
-        onChange={(event) => setQuery(event.target.value)}
+        disabled={loading}
+        onChange={(event) => {
+          setDismissed(false);
+          setQuery(event.target.value);
+        }}
+        onFocus={() => {
+          setDismissed(false);
+          setTouched(true);
+        }}
         onKeyDown={onKeyDown}
         autoFocus={autoFocus}
         className="tool-search-input"
@@ -68,9 +113,15 @@ export function ToolSearchView({
         {liveText}
       </p>
 
-      {open && (
+      {showList && (
         <ul id={listboxId} role="listbox" aria-label="Search results" className="tool-search-listbox">
-          {results.length === 0 ? (
+          {errored ? (
+            <li className="tool-search-empty">
+              The tool catalog couldn&rsquo;t be loaded, so search isn&rsquo;t available right now.{" "}
+              <Link href="/conversions">Browse every conversion</Link> or{" "}
+              <Link href="/pdf">every PDF tool</Link> instead.
+            </li>
+          ) : results.length === 0 ? (
             <li className="tool-search-empty">
               Nothing matches &ldquo;{query.trim()}&rdquo;.{" "}
               <Link href="/conversions">See every conversion</Link> or{" "}

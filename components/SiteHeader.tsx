@@ -1,20 +1,11 @@
 /**
  * The site header.
  *
- * Two deliberate departures from the reference design this is modelled on:
- *
- *   - **No Log in / Sign up.** The service is unauthenticated on purpose —
- *     "no keys, tokens or login", in the README's words — so there is nothing
- *     for those two controls to do, and no account for them to lead to. The
- *     space is simply empty.
- *   - **No dropdown menus.** A menu that opens on hover or click is a focus
- *     trap and a keyboard-navigation problem, and everything it would contain is
- *     a link that is already on `/conversions` and in the footer. The header
- *     carries a short list; the footer carries all of them.
- *
- * The header is therefore just the wordmark, search, and a link list — there
- * is no call to action, because the page underneath it is already the choice
- * it would be asking you to make.
+ * One deliberate departure from the reference design this is modelled on:
+ * **no Log in / Sign up.** The service is unauthenticated on purpose — "no
+ * keys, tokens or login", in the README's words — so there is nothing for
+ * those two controls to do, and no account for them to lead to. The space is
+ * simply empty.
  *
  * Search lives here too, not just in the homepage hero: the IA decision
  * (Phase 3, Gate 3) was that search has to be reachable from every page, not
@@ -24,15 +15,28 @@
  * query are deliberately independent, so a filtered homepage view doesn't
  * fight a header search on the same page for one query string.
  *
- * These links keep `next/link`'s default prefetch: there are six of them, they
- * are above the fold on every page, and preloading them is what makes moving
- * around the site feel immediate. The grid and the footer, which carry
- * thirty-six apiece, opt out — see `ToolCard`.
+ * These links keep `next/link`'s default prefetch: there are five of them,
+ * they are above the fold on every page, and preloading them is what makes
+ * moving around the site feel immediate. `ToolsMenu`'s panel and the footer,
+ * which carry the full catalog, opt out — see `ToolCard`.
+ *
+ * `ToolsMenu` is the one interactive piece of navigation, a click-toggled
+ * mega menu grouped by `lib/categories.ts` — see its own doc comment for why
+ * a toggled panel rather than the hover-only kind a menu like this usually
+ * gets.
+ *
+ * `.site-header-search` and `.site-nav` both disappear below 880px — a search
+ * box and a five-item link list don't fit a phone-width header bar at once —
+ * and `MobileHeaderControls` takes their place: two icons, search and menu,
+ * each opening the thing it stands for as a full-width panel under the
+ * header instead of inline.
  */
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { MobileHeaderControls } from "@/components/MobileHeaderControls";
 import { ToolSearch } from "@/components/ToolSearch";
+import { ToolsMenu } from "@/components/ToolsMenu";
 import { SITE_NAME } from "@/lib/site";
 import { POPULAR } from "@/lib/catalog";
 
@@ -62,9 +66,10 @@ export function SiteHeader(): React.ReactElement {
               {entry.heading}
             </Link>
           ))}
-          <Link href="/conversions">All tools</Link>
-          <Link href="/pdf">PDF tools</Link>
+          <ToolsMenu />
         </nav>
+
+        <MobileHeaderControls />
       </div>
     </header>
   );

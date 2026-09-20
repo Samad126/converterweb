@@ -15,6 +15,7 @@ import { ConversionFailed } from "./api";
 import { buildDownloadName } from "./contentDisposition";
 import { type Failure, cancelledFailure, networkFailure } from "./errors";
 import { type PdfPart, postPdfTool, type PdfHandle } from "./pdfApi";
+import { pdfToolFileError } from "./pdfFileValidation";
 
 export type FormFieldType =
   | "text"
@@ -49,6 +50,8 @@ export interface PdfFormFieldsResult {
 
 export interface PdfFormFieldsTool {
   file: File | null;
+  /** Why the last `selectFile` was refused, if it was. Cleared by the next attempt. */
+  fileError: string | null;
   phase: PdfFormFieldsPhase;
   selectFile: (file: File) => void;
   clearFile: () => void;
@@ -59,8 +62,11 @@ export interface PdfFormFieldsTool {
   reset: () => void;
 }
 
+const ACCEPTED_EXTENSIONS = [".pdf"];
+
 export function usePdfFormFieldsTool(): PdfFormFieldsTool {
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<PdfFormFieldsPhase>({ name: "ready" });
 
   const handleRef = useRef<PdfHandle | null>(null);
@@ -85,6 +91,12 @@ export function usePdfFormFieldsTool(): PdfFormFieldsTool {
 
   const selectFile = useCallback(
     (next: File): void => {
+      const error = pdfToolFileError(next, ACCEPTED_EXTENSIONS);
+      if (error) {
+        setFileError(error);
+        return;
+      }
+      setFileError(null);
       revokeDownloadUrl();
       setFile(next);
       setPhase({ name: "ready" });
@@ -93,6 +105,7 @@ export function usePdfFormFieldsTool(): PdfFormFieldsTool {
   );
 
   const clearFile = useCallback((): void => {
+    setFileError(null);
     revokeDownloadUrl();
     setFile(null);
     setPhase({ name: "ready" });
@@ -178,7 +191,7 @@ export function usePdfFormFieldsTool(): PdfFormFieldsTool {
     setPhase({ name: "ready" });
   }, [revokeDownloadUrl]);
 
-  return { file, phase, selectFile, clearFile, list, fill, reset };
+  return { file, fileError, phase, selectFile, clearFile, list, fill, reset };
 }
 
 function isAbort(error: unknown): boolean {

@@ -16,6 +16,7 @@ import { ConversionFailed } from "./api";
 import { buildDownloadName } from "./contentDisposition";
 import { type Failure, cancelledFailure, networkFailure } from "./errors";
 import { type PdfPart, postPdfTool, type PdfHandle } from "./pdfApi";
+import { pdfToolFileError } from "./pdfFileValidation";
 
 export type PdfMultiToolPhase =
   | { name: "ready" }
@@ -32,6 +33,8 @@ export interface PdfMultiToolResult {
 
 export interface PdfMultiFileTool {
   files: readonly File[];
+  /** One sentence per file the last `addFiles` call refused. Cleared by the next call. */
+  fileErrors: readonly string[];
   phase: PdfMultiToolPhase;
   elapsedMs: number;
   canRun: boolean;
@@ -50,6 +53,8 @@ export interface PdfMultiFileToolOptions {
   minFiles?: number;
   responseMediaType?: string;
   downloadExtension?: string;
+  /** The extensions `addFiles` accepts, dot-prefixed. Defaults to `[".pdf"]`. */
+  acceptedExtensions?: readonly string[];
 }
 
 export function usePdfMultiFileTool(
@@ -61,9 +66,11 @@ export function usePdfMultiFileTool(
     minFiles = 1,
     responseMediaType = "application/pdf",
     downloadExtension = ".pdf",
+    acceptedExtensions = [".pdf"],
   } = options;
 
   const [files, setFiles] = useState<readonly File[]>([]);
+  const [fileErrors, setFileErrors] = useState<readonly string[]>([]);
   const [phase, setPhase] = useState<PdfMultiToolPhase>({ name: "ready" });
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -97,11 +104,22 @@ export function usePdfMultiFileTool(
   const addFiles = useCallback(
     (next: readonly File[]): void => {
       if (next.length === 0) return;
+
+      const errors: string[] = [];
+      const accepted: File[] = [];
+      for (const file of next) {
+        const error = pdfToolFileError(file, acceptedExtensions);
+        if (error) errors.push(error);
+        else accepted.push(file);
+      }
+      setFileErrors(errors);
+
+      if (accepted.length === 0) return;
       revokeDownloadUrl();
       setPhase({ name: "ready" });
-      setFiles((current) => [...current, ...next]);
+      setFiles((current) => [...current, ...accepted]);
     },
-    [revokeDownloadUrl],
+    [acceptedExtensions, revokeDownloadUrl],
   );
 
   const removeFile = useCallback(
@@ -209,6 +227,7 @@ export function usePdfMultiFileTool(
 
   return {
     files,
+    fileErrors,
     phase,
     elapsedMs,
     canRun: files.length >= minFiles && phase.name === "ready",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProtectTool } from "@/components/pdf/ProtectTool";
 
 export const metadata: Metadata = {
@@ -10,13 +11,21 @@ export const metadata: Metadata = {
 
 export default function ProtectPage(): React.ReactElement {
   return (
-    <main id="content" className="mx-auto w-full max-w-[760px] px-5 py-14">
+    <main id="content" className="shell py-10 sm:py-14">
+      <Breadcrumbs
+        crumbs={[
+          ["Home", "/"],
+          ["PDF tools", "/pdf"],
+          ["Add a password to a PDF", "/pdf/protect"],
+        ]}
+      />
+
       <h1 className="page-title">Add a password to a PDF</h1>
       <p className="page-lede">
         Encrypt a PDF with a password, used as both the user and owner password. A PDF that is
         already encrypted is refused — unlock it first.
       </p>
-      <div className="mt-8">
+      <div className="conversion-aside-inner mt-8">
         <ProtectTool />
       </div>
     </main>

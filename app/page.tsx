@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { CategorySection } from "@/components/CategorySection";
 import { Faq } from "@/components/Faq";
 import { JsonLd } from "@/components/JsonLd";
 import { ToolSearch } from "@/components/ToolSearch";
-import { CATALOG, HOME_FAQS, entriesByFamily } from "@/lib/catalog";
+import { CATALOG, HOME_FAQS } from "@/lib/catalog";
 import { CATEGORIES } from "@/lib/categories";
+import { PDF_TOOLS } from "@/lib/pdfTools";
 import { faqPage, itemList } from "@/lib/schema";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 
@@ -32,9 +32,16 @@ export const metadata: Metadata = {
   openGraph: { url: absoluteUrl("/") },
 };
 
-export default function HomePage(): React.ReactElement {
-  const families = entriesByFamily();
+/**
+ * How many `/pdf/*` tools actually have a page.
+ *
+ * `lib/pdfTools.ts` names tools that are planned as well as ones that ship, and
+ * gates a link on `route` — so counting the array would claim tools that do not
+ * exist yet. The hero repeats this number, so it has to be the honest one.
+ */
+const shippedPdfTools = PDF_TOOLS.filter((tool) => tool.route !== null).length;
 
+export default function HomePage(): React.ReactElement {
   return (
     <main id="content">
       <JsonLd document={itemList(CATALOG)} />
@@ -43,6 +50,13 @@ export default function HomePage(): React.ReactElement {
       {/* ------------------------------------------------------------ hero */}
       <section className="hero">
         <div className="shell">
+          {/* Three facts, as a masthead. This is the first thing on the page
+              and the only sentence a visitor is guaranteed to read, so it says
+              the three things that separate this from a tool that asks for an
+              email address — and it says them in the smallest type on the page,
+              which is what makes the headline under it land. */}
+          <p className="eyebrow">No account · No install · Nothing kept</p>
+
           <h1 className="hero-title">
             Every file conversion you need, in one place
           </h1>
@@ -59,17 +73,39 @@ export default function HomePage(): React.ReactElement {
             </Suspense>
           </div>
           <p className="hero-actions">
-            <a className="btn-quiet hero-cta" href="#tools">
+            <a className="btn hero-cta" href="#tools">
               Browse every tool by category
             </a>
           </p>
+
+          {/* Counted, never written down: both figures come from the same
+              registries the pages themselves are built from, so a conversion
+              added tomorrow changes this number without anyone remembering to.
+
+              `column-reverse` puts the figure above its label while the DOM
+              keeps the `dt`-then-`dd` order a definition list requires — so a
+              screen reader hears "Conversions, 36" rather than a bare number. */}
+          <dl className="hero-stats">
+            <div className="stat">
+              <dt className="stat-label">Conversions</dt>
+              <dd className="stat-value">{CATALOG.length}</dd>
+            </div>
+            <div className="stat">
+              <dt className="stat-label">PDF tools</dt>
+              <dd className="stat-value">{shippedPdfTools}</dd>
+            </div>
+            <div className="stat">
+              <dt className="stat-label">Files stored</dt>
+              <dd className="stat-value">0</dd>
+            </div>
+          </dl>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- tools */}
       <div id="tools">
-        {CATEGORIES.map((category) => (
-          <CategorySection key={category.id} category={category} />
+        {CATEGORIES.map((category, i) => (
+          <CategorySection key={category.id} category={category} index={i + 1} />
         ))}
       </div>
 
@@ -144,27 +180,6 @@ export default function HomePage(): React.ReactElement {
               millions of people use to open these files locally.
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* --------------------------------------------- family deep links */}
-      <section className="shell section section-rule">
-        <h2 className="section-title">Browse by file type</h2>
-        <div className="link-columns">
-          {families.map((group) => (
-            <nav key={group.family} aria-label={`${group.label} conversions`}>
-              <h3 className="link-column-heading">{group.label}</h3>
-              <ul className="link-list">
-                {group.entries.map((entry) => (
-                  <li key={entry.slug}>
-                    <Link href={`/${entry.slug}`} prefetch={false}>
-                      {entry.heading}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
         </div>
       </section>
 

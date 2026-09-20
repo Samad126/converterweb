@@ -22,6 +22,7 @@ import { ConversionFailed } from "./api";
 import { type PdfPart, postPdfTool, type PdfHandle } from "./pdfApi";
 import { buildDownloadName } from "./contentDisposition";
 import { type Failure, cancelledFailure, networkFailure } from "./errors";
+import { pdfToolFileError } from "./pdfFileValidation";
 
 export type PdfToolPhase =
   | { name: "ready" }
@@ -38,6 +39,8 @@ export interface PdfToolResult {
 
 export interface PdfFileTool {
   file: File | null;
+  /** Why the last `selectFile` was refused, if it was. Cleared by the next attempt. */
+  fileError: string | null;
   phase: PdfToolPhase;
   elapsedMs: number;
   canRun: boolean;
@@ -59,11 +62,18 @@ export interface PdfFileToolOptions {
    */
   responseMediaType?: string;
   downloadExtension?: string;
+  /** The extensions `selectFile` accepts, dot-prefixed. Defaults to `[".pdf"]`. */
+  acceptedExtensions?: readonly string[];
 }
 
 export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): PdfFileTool {
-  const { responseMediaType = "application/pdf", downloadExtension = ".pdf" } = options;
+  const {
+    responseMediaType = "application/pdf",
+    downloadExtension = ".pdf",
+    acceptedExtensions = [".pdf"],
+  } = options;
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<PdfToolPhase>({ name: "ready" });
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -94,13 +104,23 @@ export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): 
     downloadUrlRef.current = null;
   }, []);
 
-  const selectFile = useCallback((next: File): void => {
-    revokeDownloadUrl();
-    setFile(next);
-    setPhase({ name: "ready" });
-  }, [revokeDownloadUrl]);
+  const selectFile = useCallback(
+    (next: File): void => {
+      const error = pdfToolFileError(next, acceptedExtensions);
+      if (error) {
+        setFileError(error);
+        return;
+      }
+      setFileError(null);
+      revokeDownloadUrl();
+      setFile(next);
+      setPhase({ name: "ready" });
+    },
+    [acceptedExtensions, revokeDownloadUrl],
+  );
 
   const clearFile = useCallback((): void => {
+    setFileError(null);
     revokeDownloadUrl();
     setFile(null);
     setPhase({ name: "ready" });
@@ -189,6 +209,7 @@ export function usePdfFileTool(path: string, options: PdfFileToolOptions = {}): 
 
   return {
     file,
+    fileError,
     phase,
     elapsedMs,
     canRun: file !== null && phase.name === "ready",

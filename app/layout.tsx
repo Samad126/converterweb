@@ -56,10 +56,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   // Both themes are supported; the browser chrome follows the same choice the
-  // stylesheet does.
+  // stylesheet does, and these two are `--paper` from each — the app canvas,
+  // not the card surface, because the chrome sits against the page's edge.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
 };
 

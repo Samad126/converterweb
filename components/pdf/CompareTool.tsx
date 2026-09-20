@@ -55,6 +55,16 @@ export function CompareTool(): React.ReactElement {
           </ol>
         ) : null}
 
+        {tool.fileErrors.length > 0 ? (
+          <ul className="flex flex-col gap-1" role="alert">
+            {tool.fileErrors.map((message, index) => (
+              <li key={index} className="notice">
+                {message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
         {tool.files.length < 2 ? (
           <DropZone
             id="pdf-compare-file"

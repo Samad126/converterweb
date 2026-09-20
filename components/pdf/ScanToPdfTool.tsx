@@ -8,7 +8,11 @@ import { PdfMultiToolShell } from "@/components/PdfMultiToolShell";
 import { usePdfMultiFileTool } from "@/lib/usePdfMultiFileTool";
 
 export function ScanToPdfTool(): React.ReactElement {
-  const tool = usePdfMultiFileTool("/pdf/scan-to-pdf", { fieldName: "files", minFiles: 1 });
+  const tool = usePdfMultiFileTool("/pdf/scan-to-pdf", {
+    fieldName: "files",
+    minFiles: 1,
+    acceptedExtensions: [".png", ".jpg", ".jpeg"],
+  });
 
   return (
     <PdfMultiToolShell

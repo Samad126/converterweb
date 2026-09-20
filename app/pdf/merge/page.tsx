@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { MergeTool } from "@/components/pdf/MergeTool";
 
 export const metadata: Metadata = {
@@ -10,13 +11,21 @@ export const metadata: Metadata = {
 
 export default function MergePage(): React.ReactElement {
   return (
-    <main id="content" className="mx-auto w-full max-w-[760px] px-5 py-10 sm:py-14">
+    <main id="content" className="shell py-10 sm:py-14">
+      <Breadcrumbs
+        crumbs={[
+          ["Home", "/"],
+          ["PDF tools", "/pdf"],
+          ["Merge PDFs", "/pdf/merge"],
+        ]}
+      />
+
       <h1 className="page-title">Merge PDFs</h1>
       <p className="page-lede">
         Combine two or more PDFs into one, in the order you list them. Every page of every file is
         kept, in its own order.
       </p>
-      <div className="mt-8">
+      <div className="conversion-aside-inner mt-8">
         <MergeTool />
       </div>
     </main>

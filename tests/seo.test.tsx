@@ -19,6 +19,7 @@ import ConversionPage, {
 } from "@/app/[conversion]/page";
 import ConversionsPage from "@/app/conversions/page";
 import HomePage from "@/app/page";
+import { SiteFooter } from "@/components/SiteFooter";
 import { CATALOG, SLUGS } from "@/lib/catalog";
 import sitemap from "@/app/sitemap";
 
@@ -149,7 +150,15 @@ describe("the routes", () => {
   });
 
   it("links every conversion from the homepage", () => {
-    const { container } = render(<HomePage />);
+    // `HomePage` itself only links the tools grid; the full set of thirty-six
+    // conversions is reached through `SiteFooter`, which every page renders
+    // via the root layout — so the two together are what a crawler sees.
+    const { container } = render(
+      <>
+        <HomePage />
+        <SiteFooter />
+      </>,
+    );
     const hrefs = new Set(
       [...container.querySelectorAll("a")].map((a) => a.getAttribute("href")),
     );

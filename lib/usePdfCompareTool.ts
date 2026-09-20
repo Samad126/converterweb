@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConversionFailed } from "./api";
 import { type Failure, cancelledFailure, networkFailure } from "./errors";
 import { postPdfTool, type PdfHandle } from "./pdfApi";
+import { pdfToolFileError } from "./pdfFileValidation";
 
 export type CompareDiffOp = "equal" | "insert" | "delete" | "replace";
 
@@ -41,6 +42,8 @@ export type PdfCompareToolPhase =
 
 export interface PdfCompareTool {
   files: readonly File[];
+  /** One sentence per file the last `addFiles` call refused. Cleared by the next call. */
+  fileErrors: readonly string[];
   phase: PdfCompareToolPhase;
   canRun: boolean;
   addFiles: (files: readonly File[]) => void;
@@ -49,8 +52,11 @@ export interface PdfCompareTool {
   reset: () => void;
 }
 
+const ACCEPTED_EXTENSIONS = [".pdf"];
+
 export function usePdfCompareTool(): PdfCompareTool {
   const [files, setFiles] = useState<readonly File[]>([]);
+  const [fileErrors, setFileErrors] = useState<readonly string[]>([]);
   const [phase, setPhase] = useState<PdfCompareToolPhase>({ name: "ready" });
   const handleRef = useRef<PdfHandle | null>(null);
   const mountedRef = useRef(true);
@@ -66,8 +72,19 @@ export function usePdfCompareTool(): PdfCompareTool {
 
   const addFiles = useCallback((next: readonly File[]): void => {
     if (next.length === 0) return;
+
+    const errors: string[] = [];
+    const accepted: File[] = [];
+    for (const file of next) {
+      const error = pdfToolFileError(file, ACCEPTED_EXTENSIONS);
+      if (error) errors.push(error);
+      else accepted.push(file);
+    }
+    setFileErrors(errors);
+
+    if (accepted.length === 0) return;
     setPhase({ name: "ready" });
-    setFiles((current) => [...current, ...next].slice(0, 2));
+    setFiles((current) => [...current, ...accepted].slice(0, 2));
   }, []);
 
   const removeFile = useCallback((index: number): void => {
@@ -115,6 +132,7 @@ export function usePdfCompareTool(): PdfCompareTool {
 
   return {
     files,
+    fileErrors,
     phase,
     canRun: files.length === 2 && phase.name === "ready",
     addFiles,

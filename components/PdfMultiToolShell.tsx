@@ -103,6 +103,16 @@ export function PdfMultiToolShell({
           </ol>
         ) : null}
 
+        {tool.fileErrors.length > 0 ? (
+          <ul className="flex flex-col gap-1" role="alert">
+            {tool.fileErrors.map((message, index) => (
+              <li key={index} className="notice">
+                {message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
         <DropZone
           id="pdf-multi-tool-file"
           accept={accept}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ConverterShell } from "@/components/ConverterShell";
 
 /**
@@ -27,7 +28,14 @@ export const metadata: Metadata = {
 
 export default function PsdToLayersPage(): React.ReactElement {
   return (
-    <main id="content" className="mx-auto w-full max-w-[760px] px-5 py-10 sm:py-14">
+    <main id="content" className="shell py-10 sm:py-14">
+      <Breadcrumbs
+        crumbs={[
+          ["Home", "/"],
+          ["PSD to layers", "/tools/psd-to-layers"],
+        ]}
+      />
+
       <h1 className="page-title">PSD to layers</h1>
       <p className="page-lede">
         Upload a Photoshop PSD and get back a ZIP holding one PNG per layer, at the path its group
@@ -35,7 +43,7 @@ export default function PsdToLayersPage(): React.ReactElement {
         its own and why.
       </p>
 
-      <div className="mt-8">
+      <div className="conversion-aside-inner mt-8">
         <ConverterShell lockedTargetId="layers" acceptedExtensions={[".psd"]} />
       </div>
 

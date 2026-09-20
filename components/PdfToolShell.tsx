@@ -79,6 +79,12 @@ export function PdfToolShell({ tool, children, onRun }: PdfToolShellProps): Reac
             onSelect={tool.selectFile}
           />
         )}
+
+        {tool.fileError ? (
+          <ul className="flex flex-col gap-1" role="alert">
+            <li className="notice">{tool.fileError}</li>
+          </ul>
+        ) : null}
       </section>
 
       {tool.file && children ? (

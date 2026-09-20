@@ -28,8 +28,8 @@ export default function PdfToolsIndexPage(): React.ReactElement {
         </p>
       </div>
 
-      {PDF_CATEGORIES.map((category) => (
-        <CategorySection key={category.id} category={category} hideSeeAll />
+      {PDF_CATEGORIES.map((category, i) => (
+        <CategorySection key={category.id} category={category} index={i + 1} hideSeeAll />
       ))}
     </main>
   );

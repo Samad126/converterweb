@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ConverterShell } from "@/components/ConverterShell";
 
 /**
@@ -23,14 +24,21 @@ export const metadata: Metadata = {
 
 export default function ExtractTablesPage(): React.ReactElement {
   return (
-    <main id="content" className="mx-auto w-full max-w-[760px] px-5 py-10 sm:py-14">
+    <main id="content" className="shell py-10 sm:py-14">
+      <Breadcrumbs
+        crumbs={[
+          ["Home", "/"],
+          ["Extract tables from Word", "/tools/extract-tables"],
+        ]}
+      />
+
       <h1 className="page-title">Extract tables from a Word document</h1>
       <p className="page-lede">
         Upload a Word document and get back an Excel workbook holding only its tables, one sheet
         per table, with none of the surrounding prose.
       </p>
 
-      <div className="mt-8">
+      <div className="conversion-aside-inner mt-8">
         <ConverterShell lockedTargetId="tables" acceptedExtensions={[".docx", ".docm"]} />
       </div>
 

@@ -89,3 +89,34 @@ export function EyeIcon(props: IconProps): React.ReactElement {
     </Icon>
   );
 }
+
+/** Three bars, for the mobile nav toggle. */
+export function MenuIcon(props: IconProps): React.ReactElement {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </Icon>
+  );
+}
+
+/** A magnifying glass, for the mobile search toggle. */
+export function SearchIcon(props: IconProps): React.ReactElement {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Icon>
+  );
+}
+
+/** An X, for dismissing the mobile search or nav panel. */
+export function CloseIcon(props: IconProps): React.ReactElement {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </Icon>
+  );
+}
