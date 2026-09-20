@@ -27,6 +27,13 @@ export interface DropZoneProps {
   limitLabel: string;
   /** Inert while a conversion is running, or while the service is not ready. */
   disabled: boolean;
+  /**
+   * Allow choosing or dropping more than one file at once.
+   *
+   * `onSelect` still fires once per file even in multi mode — the caller adds
+   * to its own list rather than this component ever holding one.
+   */
+  multiple?: boolean;
   onSelect: (file: File) => void;
 }
 
@@ -36,16 +43,18 @@ export function DropZone({
   acceptedLabel,
   limitLabel,
   disabled,
+  multiple = false,
   onSelect,
 }: DropZoneProps): React.ReactElement {
   const [isDragging, setIsDragging] = useState(false);
   const depth = useRef(0);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    const file = event.target.files?.[0];
+    const files = event.target.files;
     // Reset first, so that choosing the same file twice fires `change` twice.
     event.target.value = "";
-    if (file) onSelect(file);
+    if (!files) return;
+    for (const file of Array.from(files)) onSelect(file);
   };
 
   const handleDragEnter = (event: DragEvent<HTMLLabelElement>): void => {
@@ -76,10 +85,12 @@ export function DropZone({
     setIsDragging(false);
     if (disabled) return;
 
-    const file = event.dataTransfer.files?.[0];
+    const files = event.dataTransfer.files;
     // A drop bypasses the input's `accept` filter, so the extension check in
     // the caller is the one that actually protects this path.
-    if (file) onSelect(file);
+    if (!files) return;
+    const dropped = multiple ? Array.from(files) : files[0] ? [files[0]] : [];
+    for (const file of dropped) onSelect(file);
   };
 
   return (
@@ -88,6 +99,7 @@ export function DropZone({
         id={id}
         type="file"
         accept={accept}
+        multiple={multiple}
         className="sr-only"
         disabled={disabled}
         onChange={handleChange}

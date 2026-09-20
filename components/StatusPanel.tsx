@@ -23,15 +23,16 @@
  * result and the recovery paths are the same behaviour, because they are the
  * same conversion; only the choice has gone.
  */
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 import type { FormatsResponse, SourceFormat, TargetId } from "@/lib/contract";
 import { recoveryFor, type Failure, type Recovery } from "@/lib/errors";
 import { formatBytes } from "@/lib/format";
-import { findTarget, isReachable, unreachableReason } from "@/lib/formats";
+import { findSource, findTarget, isReachable, unreachableReason } from "@/lib/formats";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import type { HealthState, Phase } from "@/lib/useConverter";
 
+import { BulkResultCard } from "./BulkResultCard";
 import { DropZone } from "./DropZone";
 import { ErrorNote } from "./ErrorNote";
 import { FileIcon } from "./Icons";
@@ -46,6 +47,10 @@ export interface StatusPanelProps {
   formats: FormatsResponse;
   source: SourceFormat | null;
   file: File | null;
+  /** Every file chosen, in the order they were added. */
+  files: readonly File[];
+  /** One rejection sentence per file that could not be added, most recent last. */
+  fileErrors: readonly string[];
   targetId: TargetId | null;
   phase: Phase;
   health: HealthState;
@@ -58,8 +63,13 @@ export interface StatusPanelProps {
   lockedTargetId: TargetId | null;
   /** The extensions this panel accepts — the matrix, unless the page narrowed it. */
   acceptedExtensions: readonly string[];
+  /** The most files one request may carry, and their combined size limit. */
+  maxFiles: number;
+  maxTotalBytes: number;
 
   onSelectFile: (file: File) => void;
+  onAddFiles: (files: readonly File[]) => void;
+  onRemoveFile: (index: number) => void;
   onClearFile: () => void;
   onSelectTarget: (target: TargetId) => void;
   onStart: () => void;
@@ -76,6 +86,8 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     formats,
     source,
     file,
+    files,
+    fileErrors,
     targetId,
     phase,
     health,
@@ -86,7 +98,10 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     isLoadingPreview,
     lockedTargetId,
     acceptedExtensions,
-    onSelectFile,
+    maxFiles,
+    maxTotalBytes,
+    onAddFiles,
+    onRemoveFile,
     onClearFile,
     onSelectTarget,
     onStart,
@@ -98,6 +113,14 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
 
   const locked = lockedTargetId !== null;
   const selectedTarget = targetId === null ? null : findTarget(formats, targetId);
+
+  /** Every chosen file's source, for the picker — see `FormatPicker`'s own doc. */
+  const sources = useMemo<readonly SourceFormat[]>(() => {
+    const found = files
+      .map((f) => findSource(formats, f.name))
+      .filter((s): s is SourceFormat => s !== null);
+    return found;
+  }, [files, formats]);
 
   // With no picker there is no second step, so Convert moves up rather than
   // leaving a gap where the format chooser used to be.
@@ -126,6 +149,32 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
       document.getElementById(FILE_INPUT_ID)?.focus();
     });
   }, [onClearFile]);
+
+  /**
+   * `DropZone` fires `onSelect` once per file, even for one native "choose
+   * several files" gesture — so a person picking three files at once would
+   * otherwise turn into three separate `addFiles` calls, each seeing a state
+   * that has not caught up with the one before it. Every file from the same
+   * gesture lands here in the same synchronous stretch of code, so batching
+   * them into one array before the microtask queue's next turn is enough to
+   * turn them back into one `addFiles([a, b, c])` call.
+   */
+  const pendingSelectionRef = useRef<File[]>([]);
+  const flushScheduledRef = useRef(false);
+  const handleFileSelected = useCallback(
+    (file: File): void => {
+      pendingSelectionRef.current.push(file);
+      if (flushScheduledRef.current) return;
+      flushScheduledRef.current = true;
+      void Promise.resolve().then(() => {
+        flushScheduledRef.current = false;
+        const batch = pendingSelectionRef.current;
+        pendingSelectionRef.current = [];
+        onAddFiles(batch);
+      });
+    },
+    [onAddFiles],
+  );
 
   const handleAction = useCallback(
     (recovery: Recovery): void => {
@@ -170,6 +219,10 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     );
   }
 
+  if (phase.name === "done-bulk") {
+    return <BulkResultCard result={phase.result} onReset={onReset} />;
+  }
+
   const busy = phase.name === "converting";
   const failure: Failure | null = phase.name === "failed" ? phase.failure : null;
   const recovery = failure === null ? null : recoveryFor(failure);
@@ -182,7 +235,13 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     recovery === "choose-format" ||
     recovery === "start-over";
 
-  const hint = describeBlocker({ file, selectedTarget, health, canConvert, busy });
+  const hint = describeBlocker({
+    hasFiles: files.length > 0,
+    selectedTarget,
+    health,
+    canConvert,
+    busy,
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -203,16 +262,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
               Choose a file
             </h2>
 
-            {file === null ? (
-              <DropZone
-                id={FILE_INPUT_ID}
-                accept={acceptedExtensions.join(",")}
-                acceptedLabel={acceptedExtensions.join(", ")}
-                limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
-                disabled={busy}
-                onSelect={onSelectFile}
-              />
-            ) : (
+            {files.length === 1 && file !== null ? (
               <div className="file-row">
                 <FileIcon size={20} className="shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -228,6 +278,54 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
                   Remove
                 </button>
               </div>
+            ) : null}
+
+            {files.length > 1 ? (
+              <ol className="flex flex-col gap-2">
+                {files.map((chosen, index) => (
+                  <li key={`${chosen.name}-${index}`} className="chosen-file">
+                    <span className="file-name">
+                      {index + 1}. {chosen.name}
+                    </span>
+                    <span className="meta">{formatBytes(chosen.size)}</span>
+                    <button
+                      type="button"
+                      className="btn-quiet"
+                      onClick={() => onRemoveFile(index)}
+                      disabled={busy}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
+            {fileErrors.length > 0 ? (
+              <ul className="flex flex-col gap-1" role="alert">
+                {fileErrors.map((message, index) => (
+                  <li key={index} className="notice">
+                    {message}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {files.length < maxFiles ? (
+              <DropZone
+                id={FILE_INPUT_ID}
+                accept={acceptedExtensions.join(",")}
+                acceptedLabel={acceptedExtensions.join(", ")}
+                limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
+                disabled={busy}
+                multiple
+                onSelect={handleFileSelected}
+              />
+            ) : (
+              <p className="meta">
+                Up to {maxFiles} files at once, {formatBytes(maxTotalBytes)} combined — remove one
+                to add another.
+              </p>
             )}
           </section>
 
@@ -247,7 +345,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
               <FormatPicker
                 name="target"
                 formats={formats}
-                source={source}
+                sources={sources}
                 selected={targetId}
                 inert={busy}
                 onSelect={onSelectTarget}
@@ -305,7 +403,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
 
 /** What is standing between the person and a conversion, in one line. */
 function describeBlocker(input: {
-  file: File | null;
+  hasFiles: boolean;
   selectedTarget: { label: string } | null;
   health: HealthState;
   canConvert: boolean;
@@ -315,9 +413,9 @@ function describeBlocker(input: {
   if (input.health === "checking") return "Checking that the converter is ready…";
   if (input.health === "unavailable") return "Conversion is paused until the converter answers.";
   if (input.canConvert) {
-    return "Up to 25 MB. Nothing is saved in this browser.";
+    return "Up to 25 MB per file. Nothing is saved in this browser.";
   }
-  if (input.file === null) return "Choose a file to convert.";
+  if (!input.hasFiles) return "Choose a file to convert.";
   if (input.selectedTarget === null) return "Choose an output format.";
-  return "Up to 25 MB. Nothing is saved in this browser.";
+  return "Up to 25 MB per file. Nothing is saved in this browser.";
 }

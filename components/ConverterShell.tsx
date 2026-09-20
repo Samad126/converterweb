@@ -72,6 +72,8 @@ export function ConverterShell({
           formats={converter.formats}
           source={converter.source}
           file={converter.file}
+          files={converter.files}
+          fileErrors={converter.fileErrors}
           targetId={converter.targetId}
           phase={converter.phase}
           health={converter.health}
@@ -82,7 +84,11 @@ export function ConverterShell({
           isLoadingPreview={converter.isLoadingPreview}
           lockedTargetId={converter.lockedTargetId}
           acceptedExtensions={converter.acceptedExtensions}
+          maxFiles={converter.maxFiles}
+          maxTotalBytes={converter.maxTotalBytes}
           onSelectFile={converter.selectFile}
+          onAddFiles={converter.addFiles}
+          onRemoveFile={converter.removeFile}
           onClearFile={converter.clearFile}
           onSelectTarget={converter.selectTarget}
           onStart={converter.start}
