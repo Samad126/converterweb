@@ -21,9 +21,19 @@ export interface PdfTool {
 export const PDF_TOOLS: readonly PdfTool[] = [
   { id: "ocr", label: "OCR", blurb: "Make a scanned PDF searchable.", route: "/pdf/ocr" },
   { id: "compress", label: "Compress", blurb: "Shrink a PDF's file size.", route: "/pdf/compress" },
-  { id: "form-fields", label: "Fill a form", blurb: "Read and fill a PDF's form fields.", route: null },
-  { id: "compare", label: "Compare", blurb: "See what changed between two PDFs.", route: null },
-  { id: "sign", label: "Sign", blurb: "Stamp a signature, initials or date onto a PDF.", route: null },
+  {
+    id: "form-fields",
+    label: "Fill a form",
+    blurb: "Read and fill a PDF's form fields.",
+    route: "/pdf/form-fields",
+  },
+  { id: "compare", label: "Compare", blurb: "See what changed between two PDFs.", route: "/pdf/compare" },
+  {
+    id: "sign",
+    label: "Sign",
+    blurb: "Stamp a signature, initials or date onto a PDF.",
+    route: "/pdf/sign",
+  },
   { id: "merge", label: "Merge", blurb: "Combine several PDFs into one.", route: "/pdf/merge" },
   { id: "split", label: "Split", blurb: "Break a PDF into separate files.", route: "/pdf/split" },
   { id: "rotate", label: "Rotate", blurb: "Rotate one or more pages.", route: "/pdf/rotate" },
@@ -42,8 +52,13 @@ export const PDF_TOOLS: readonly PdfTool[] = [
     route: "/pdf/organize",
   },
   { id: "crop", label: "Crop", blurb: "Trim a PDF's page margins.", route: "/pdf/crop" },
-  { id: "edit", label: "Edit", blurb: "Add text, shapes or images to a page.", route: null },
-  { id: "redact", label: "Redact", blurb: "Permanently black out sensitive content.", route: null },
+  { id: "edit", label: "Edit", blurb: "Add text, shapes or images to a page.", route: "/pdf/edit" },
+  {
+    id: "redact",
+    label: "Redact",
+    blurb: "Permanently black out sensitive content.",
+    route: "/pdf/redact",
+  },
   { id: "repair", label: "Repair", blurb: "Recover a damaged PDF.", route: "/pdf/repair" },
   {
     id: "extract-pages",
