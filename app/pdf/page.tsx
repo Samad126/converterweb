@@ -11,11 +11,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * The four non-conversion categories from `lib/categories.ts` — everything on
- * this page works directly on a PDF (or, for the two extraction tools, a PSD
- * or Word document), no format conversion involved.
+ * The non-conversion, PDF-only categories from `lib/categories.ts` —
+ * everything on this page works directly on a PDF, no format conversion
+ * involved. `extract` is excluded too: its two tools take a PSD or a Word
+ * document, not a PDF, so they get their own hub at `/tools` instead.
  */
-const PDF_CATEGORIES = CATEGORIES.filter((category) => category.id !== "convert");
+const PDF_CATEGORIES = CATEGORIES.filter(
+  (category) => category.id !== "convert" && category.id !== "extract",
+);
 
 export default function PdfToolsIndexPage(): React.ReactElement {
   return (

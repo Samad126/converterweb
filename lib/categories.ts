@@ -95,8 +95,8 @@ export const CATEGORIES: readonly Category[] = [
     id: "extract",
     label: "Extract",
     lede: "Pull specific content out of a file rather than converting the whole thing.",
-    seeAllHref: "/pdf",
-    seeAllLabel: "All PDF tools",
+    seeAllHref: "/tools",
+    seeAllLabel: "All extra tools",
     items: EXTRA_TOOLS.map((tool) => ({
       id: tool.id,
       label: tool.label,
