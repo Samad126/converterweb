@@ -36,7 +36,7 @@ import { server } from "./msw/server";
 
 const PAGE_SIZE_PT = { width: 200, height: 300 };
 
-vi.mock("pdfjs-dist", () => {
+function mockPdfjsModule() {
   const page = {
     getViewport: ({ scale }: { scale: number }) => ({
       width: PAGE_SIZE_PT.width * scale,
@@ -49,7 +49,11 @@ vi.mock("pdfjs-dist", () => {
     GlobalWorkerOptions: {},
     getDocument: () => ({ promise: Promise.resolve(doc) }),
   };
-});
+}
+
+// `PdfPagePreview` imports the `legacy/` build (see its own file for why),
+// not the package's main entry — mock that path.
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", mockPdfjsModule);
 
 function pdfFile(name = "doc.pdf"): File {
   return new File(["%PDF-1.4 fake"], name, { type: "application/pdf" });

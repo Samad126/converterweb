@@ -12,9 +12,15 @@
  * `new URL(..., import.meta.url)` reference, which both Webpack and Turbopack
  * resolve into a static asset at build time. No manual copy into `public/`
  * needed.
+ *
+ * Imports from `pdfjs-dist/legacy/...` rather than the package's main entry:
+ * the main build targets current evergreen browsers and has been seen to
+ * fail outright (both the module worker and the plain document load) on
+ * Samsung Internet. `legacy/` is pdf.js's own documented answer for browsers
+ * that lag behind — same API, more conservatively compiled.
  */
 import { useEffect, useRef, useState } from "react";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import type { Size } from "@/lib/pdfCoords";
 
@@ -60,28 +66,28 @@ export function PdfPagePreview({
       }
       setError(null);
       try {
-        const pdfjs = await import("pdfjs-dist");
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
+          "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
         pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-        const data = await file.arrayBuffer();
-        if (cancelled) return;
-
         let loaded: PDFDocumentProxy;
         try {
-          loaded = await pdfjs.getDocument({ data }).promise;
+          loaded = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
         } catch (workerError) {
-          // A module Worker (what this build's .mjs worker needs) is not
-          // universally supported — Samsung Internet in particular has been
-          // seen to fail here. Falling back to no worker at all runs pdf.js
-          // on the main thread instead, which is slower but works wherever
-          // the module worker doesn't.
+          // A module Worker is not universally supported even in the legacy
+          // build. Falling back to no worker at all runs pdf.js on the main
+          // thread instead, which is slower but works wherever the module
+          // worker doesn't. `file.arrayBuffer()` is called again, fresh, for
+          // the retry: pdf.js transfers (detaches) the buffer to the worker
+          // it tried to start, so the one from the first attempt is no
+          // longer usable even though that attempt failed.
           console.warn("pdf.js: module worker failed, retrying without one", workerError);
+          if (cancelled) return;
           pdfjs.GlobalWorkerOptions.workerSrc = "";
-          loaded = await pdfjs.getDocument({ data }).promise;
+          loaded = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
         }
         if (cancelled) return;
         setDoc(loaded);
