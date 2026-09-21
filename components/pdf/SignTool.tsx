@@ -267,7 +267,7 @@ interface SignOverlayProps {
 }
 
 function SignOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArmedIndex, updateRow }: SignOverlayProps): React.ReactElement {
-  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null, (pixelRect) => {
+  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null, canvasSizePx, (pixelRect) => {
     if (armedIndex === null) return;
     updateRow(armedIndex, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) });
     setArmedIndex(null);
@@ -282,6 +282,8 @@ function SignOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
           key={index}
           rect={pointRectToPixelRect(row.rect, canvasSizePx, pageSizePt)}
           label={`Element ${index + 1}`}
+          containerRef={containerRef}
+          canvasSizePx={canvasSizePx}
           onChange={(pixelRect) => updateRow(index, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) })}
         />
       ))}

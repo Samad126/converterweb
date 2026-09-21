@@ -3,16 +3,35 @@
 /**
  * Drag-to-create and drag-to-move/resize primitives shared by the overlays
  * `SignTool`, `RedactTool` and `EditTool` render inside `PdfPagePreview`.
- * Everything here works in screen-pixel space only — converting to/from PDF
- * points is the caller's job, via `lib/pdfCoords.ts`.
+ * Everything here works in canvas-pixel space (`canvasSizePx` from
+ * `PdfPagePreview`) — converting to/from PDF points is the caller's job, via
+ * `lib/pdfCoords.ts`.
+ *
+ * The overlay's rendered box can be narrower than `canvasSizePx` — the
+ * preview scales down to fit its column on a narrow screen — so every raw
+ * `clientX`/`clientY` delta is rescaled by the ratio between the box's
+ * *displayed* size (`getBoundingClientRect()`) and its *coordinate-space*
+ * size (`canvasSizePx`) before it is treated as a canvas-pixel offset.
+ * Skipping this would place or drag a box to the wrong spot the moment the
+ * preview is shown any smaller than its native render resolution.
  */
 import { useCallback, useRef, useState } from "react";
 
+import type { Size } from "@/lib/pdfCoords";
 import { rectFromCorners, type Point, type Rect } from "@/lib/pdfCoords";
 
-function pointFromEvent(container: HTMLElement, event: React.PointerEvent): Point {
+/** How many canvas-pixel units one *displayed* pixel of `box` covers. */
+function displayScale(box: { width: number; height: number }, canvasSizePx: Size): { sx: number; sy: number } {
+  return {
+    sx: box.width === 0 ? 1 : canvasSizePx.width / box.width,
+    sy: box.height === 0 ? 1 : canvasSizePx.height / box.height,
+  };
+}
+
+function pointFromEvent(container: HTMLElement, event: React.PointerEvent, canvasSizePx: Size): Point {
   const box = container.getBoundingClientRect();
-  return { x: event.clientX - box.left, y: event.clientY - box.top };
+  const { sx, sy } = displayScale(box, canvasSizePx);
+  return { x: (event.clientX - box.left) * sx, y: (event.clientY - box.top) * sy };
 }
 
 /**
@@ -20,7 +39,7 @@ function pointFromEvent(container: HTMLElement, event: React.PointerEvent): Poin
  * across empty space. Disabled (`active = false`) once a tool wants to let
  * existing boxes be moved/resized without starting a new one underneath.
  */
-export function useNewRectDrag(active: boolean, onCommit: (rect: Rect) => void) {
+export function useNewRectDrag(active: boolean, canvasSizePx: Size, onCommit: (rect: Rect) => void) {
   const [draft, setDraft] = useState<{ start: Point; current: Point } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -29,20 +48,20 @@ export function useNewRectDrag(active: boolean, onCommit: (rect: Rect) => void) 
       if (!active || event.target !== event.currentTarget) return;
       const container = containerRef.current;
       if (!container) return;
-      const point = pointFromEvent(container, event);
+      const point = pointFromEvent(container, event, canvasSizePx);
       setDraft({ start: point, current: point });
       event.currentTarget.setPointerCapture?.(event.pointerId);
     },
-    [active],
+    [active, canvasSizePx],
   );
 
   const onPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const container = containerRef.current;
       if (!draft || !container) return;
-      setDraft({ start: draft.start, current: pointFromEvent(container, event) });
+      setDraft({ start: draft.start, current: pointFromEvent(container, event, canvasSizePx) });
     },
-    [draft],
+    [draft, canvasSizePx],
   );
 
   const onPointerUp = useCallback(() => {
@@ -65,10 +84,26 @@ export interface PlacedBoxProps {
   label?: string;
   color?: string;
   className?: string;
+  /**
+   * The overlay's container element and its coordinate-space size, so a drag
+   * delta measured in *displayed* client pixels can be rescaled into
+   * `canvasSizePx` units — see the module comment above.
+   */
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  canvasSizePx: Size;
 }
 
 /** An existing element's box: draggable by its body, resizable by its corner handle. */
-export function PlacedBox({ rect, onChange, onRemove, label, color = "#2563eb", className }: PlacedBoxProps): React.ReactElement {
+export function PlacedBox({
+  rect,
+  onChange,
+  onRemove,
+  label,
+  color = "#2563eb",
+  className,
+  containerRef,
+  canvasSizePx,
+}: PlacedBoxProps): React.ReactElement {
   const dragRef = useRef<{ mode: "move" | "resize"; start: Point; rect: Rect } | null>(null);
 
   const startDrag = (mode: "move" | "resize", event: React.PointerEvent<HTMLDivElement>): void => {
@@ -83,8 +118,10 @@ export function PlacedBox({ rect, onChange, onRemove, label, color = "#2563eb", 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
     const drag = dragRef.current;
     if (!drag) return;
-    const dx = event.clientX - drag.start.x;
-    const dy = event.clientY - drag.start.y;
+    const box = containerRef.current?.getBoundingClientRect();
+    const { sx, sy } = box ? displayScale(box, canvasSizePx) : { sx: 1, sy: 1 };
+    const dx = (event.clientX - drag.start.x) * sx;
+    const dy = (event.clientY - drag.start.y) * sy;
     if (drag.mode === "move") {
       onChange({ ...drag.rect, x: drag.rect.x + dx, y: drag.rect.y + dy });
     } else {

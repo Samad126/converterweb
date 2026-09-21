@@ -327,13 +327,13 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
   const armedRow = armedIndex !== null ? rows[armedIndex] : null;
   const isFreehandArmed = armedRow?.type === "freehand";
 
-  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null && !isFreehandArmed, (pixelRect) => {
+  const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null && !isFreehandArmed, canvasSizePx, (pixelRect) => {
     if (armedIndex === null) return;
     updateRow(armedIndex, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) });
     setArmedIndex(null);
   });
 
-  const freehand = useFreehandDrag(isFreehandArmed, (pixelPoints) => {
+  const freehand = useFreehandDrag(isFreehandArmed, canvasSizePx, (pixelPoints) => {
     if (armedIndex === null) return;
     updateRow(armedIndex, { points: pixelPoints.map((p) => pixelPointToPagePoint(p, canvasSizePx, pageSizePt)) });
     setArmedIndex(null);
@@ -358,6 +358,8 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
             key={index}
             rect={pointRectToPixelRect(row.rect, canvasSizePx, pageSizePt)}
             label={`Element ${index + 1}`}
+            containerRef={isFreehandArmed ? freehand.containerRef : containerRef}
+            canvasSizePx={canvasSizePx}
             onChange={(pixelRect) => updateRow(index, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) })}
           />
         ),
@@ -366,7 +368,11 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
         <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #2563eb" }} />
       ) : null}
       {freehand.draftPoints.length >= 2 ? (
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+        <svg
+          viewBox={`0 0 ${canvasSizePx.width} ${canvasSizePx.height}`}
+          preserveAspectRatio="none"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+        >
           <polyline
             points={freehand.draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
@@ -382,23 +388,34 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
 function FreehandPreview({ points, canvasSizePx, pageSizePt, color }: { points: Point[]; canvasSizePx: Size; pageSizePt: Size; color: string }): React.ReactElement {
   const pixelPoints = points.map((p) => pagePointToPixelPoint(p, canvasSizePx, pageSizePt));
   return (
-    <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+    <svg
+      viewBox={`0 0 ${canvasSizePx.width} ${canvasSizePx.height}`}
+      preserveAspectRatio="none"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+    >
       <polyline points={pixelPoints.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={color === "black" ? "#000" : color} strokeWidth={2} />
     </svg>
   );
 }
 
-function useFreehandDrag(active: boolean, onCommit: (points: Point[]) => void) {
+function useFreehandDrag(active: boolean, canvasSizePx: Size, onCommit: (points: Point[]) => void) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [draftPoints, setDraftPoints] = useState<Point[]>([]);
   const drawingRef = useRef(false);
 
-  const pointFromEvent = useCallback((event: React.PointerEvent): Point | null => {
-    const container = containerRef.current;
-    if (!container) return null;
-    const box = container.getBoundingClientRect();
-    return { x: event.clientX - box.left, y: event.clientY - box.top };
-  }, []);
+  const pointFromEvent = useCallback(
+    (event: React.PointerEvent): Point | null => {
+      const container = containerRef.current;
+      if (!container) return null;
+      const box = container.getBoundingClientRect();
+      // Scaled the same way `placement.tsx` scales drag deltas: the overlay
+      // can be displayed smaller than `canvasSizePx` on a narrow screen.
+      const sx = box.width === 0 ? 1 : canvasSizePx.width / box.width;
+      const sy = box.height === 0 ? 1 : canvasSizePx.height / box.height;
+      return { x: (event.clientX - box.left) * sx, y: (event.clientY - box.top) * sy };
+    },
+    [canvasSizePx],
+  );
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {

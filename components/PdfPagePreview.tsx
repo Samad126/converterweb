@@ -61,20 +61,37 @@ export function PdfPagePreview({
       setError(null);
       try {
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        const workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
+        pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
         const data = await file.arrayBuffer();
         if (cancelled) return;
-        const loaded = await pdfjs.getDocument({ data }).promise;
+
+        let loaded: PDFDocumentProxy;
+        try {
+          loaded = await pdfjs.getDocument({ data }).promise;
+        } catch (workerError) {
+          // A module Worker (what this build's .mjs worker needs) is not
+          // universally supported — Samsung Internet in particular has been
+          // seen to fail here. Falling back to no worker at all runs pdf.js
+          // on the main thread instead, which is slower but works wherever
+          // the module worker doesn't.
+          console.warn("pdf.js: module worker failed, retrying without one", workerError);
+          pdfjs.GlobalWorkerOptions.workerSrc = "";
+          loaded = await pdfjs.getDocument({ data }).promise;
+        }
         if (cancelled) return;
         setDoc(loaded);
         setPageCount(loaded.numPages);
         onPageCount?.(loaded.numPages);
-      } catch {
-        if (!cancelled) setError("Could not render a preview of this PDF.");
+      } catch (error) {
+        if (!cancelled) {
+          console.error("pdf.js: could not load PDF for preview", error);
+          setError("Could not render a preview of this PDF.");
+        }
       }
     })();
 
@@ -106,8 +123,11 @@ export function PdfPagePreview({
         const context = canvas.getContext("2d");
         if (!context) return;
         await pdfPage.render({ canvasContext: context, viewport, canvas }).promise;
-      } catch {
-        if (!cancelled) setError("Could not render a preview of this PDF.");
+      } catch (error) {
+        if (!cancelled) {
+          console.error("pdf.js: could not render page for preview", error);
+          setError("Could not render a preview of this PDF.");
+        }
       }
     })();
 
@@ -147,9 +167,20 @@ export function PdfPagePreview({
 
       <div
         data-testid="pdf-page-preview"
-        style={{ position: "relative", width: canvasSizePx.width || undefined, height: canvasSizePx.height || undefined }}
+        style={{
+          position: "relative",
+          width: canvasSizePx.width || undefined,
+          // A raw-pixel width would overflow a narrow column — `pdf.js`
+          // renders at `renderScale` canvas pixels per PDF point, which can
+          // be wider than a phone's viewport. `maxWidth` caps the box and
+          // `aspectRatio` keeps the height in step, so the whole thing (and
+          // the overlay sized to match it below) scales down together
+          // instead of clipping or stretching.
+          maxWidth: "100%",
+          aspectRatio: canvasSizePx.width > 0 ? `${canvasSizePx.width} / ${canvasSizePx.height}` : undefined,
+        }}
       >
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
         {canvasSizePx.width > 0 ? (
           <div style={{ position: "absolute", inset: 0 }}>{overlay?.(canvasSizePx, pageSizePt)}</div>
         ) : null}

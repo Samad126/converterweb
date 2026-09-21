@@ -79,7 +79,7 @@ interface RedactOverlayProps {
 }
 
 function RedactOverlay({ canvasSizePx, pageSizePt, page, areas, setAreas }: RedactOverlayProps): React.ReactElement {
-  const { containerRef, draftRect, handlers } = useNewRectDrag(true, (pixelRect) => {
+  const { containerRef, draftRect, handlers } = useNewRectDrag(true, canvasSizePx, (pixelRect) => {
     const rect = pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt);
     setAreas((current) => [...current, { page, rect }]);
   });
@@ -92,6 +92,8 @@ function RedactOverlay({ canvasSizePx, pageSizePt, page, areas, setAreas }: Reda
           rect={pointRectToPixelRect(area.rect, canvasSizePx, pageSizePt)}
           color="#dc2626"
           label={`Area ${index + 1}`}
+          containerRef={containerRef}
+          canvasSizePx={canvasSizePx}
           onChange={(pixelRect) =>
             setAreas((current) =>
               current.map((a, i) => (i === index ? { ...a, rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) } : a)),
