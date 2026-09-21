@@ -160,6 +160,10 @@ export function PlacedBox({
         cursor: "move",
         boxSizing: "border-box",
         overflow: "hidden",
+        // Without this, a touch screen treats the first move as a page
+        // scroll gesture and cancels the drag before onPointerMove ever
+        // sees it — this is what made dragging unreliable on phones.
+        touchAction: "none",
       }}
       onPointerDown={onBodyPointerDown}
       onPointerMove={onPointerMove}
@@ -186,14 +190,23 @@ export function PlacedBox({
         onPointerUp={onPointerUp}
         style={{
           position: "absolute",
-          right: -5,
-          bottom: -5,
-          width: 10,
-          height: 10,
-          background: color,
+          // A 10px square is a fine mouse target but too small to reliably
+          // hit with a finger — this pads the actual (invisible) touch
+          // target out to 28px while keeping the visible dot at 10px, via
+          // a centered ::after-style inner box.
+          right: -14,
+          bottom: -14,
+          width: 28,
+          height: 28,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           cursor: "nwse-resize",
+          touchAction: "none",
         }}
-      />
+      >
+        <div style={{ width: 10, height: 10, background: color, borderRadius: 2 }} />
+      </div>
     </div>
   );
 }

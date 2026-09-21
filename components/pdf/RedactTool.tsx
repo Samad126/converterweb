@@ -42,6 +42,7 @@ export function RedactTool(): React.ReactElement {
     <PdfToolShell
       tool={tool}
       onRun={() => tool.run([{ name: "areas", value: JSON.stringify(validAreas.map(({ page: p, rect }) => ({ page: p, ...rect }))) }])}
+      runDisabled={validAreas.length === 0}
     >
       <p className="meta">
         Permanent removal — the text, images and graphics under each rectangle are deleted from the
@@ -85,7 +86,7 @@ function RedactOverlay({ canvasSizePx, pageSizePt, page, areas, setAreas }: Reda
   });
 
   return (
-    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0 }} {...handlers}>
+    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0, touchAction: "none" }} {...handlers}>
       {areas.map(({ area, index }) => (
         <PlacedBox
           key={index}

@@ -165,7 +165,7 @@ export function SignTool(): React.ReactElement {
   }
 
   return (
-    <PdfToolShell tool={tool} onRun={onRun}>
+    <PdfToolShell tool={tool} onRun={onRun} runDisabled={!allValid}>
       <p className="meta">
         This is a visual mark only — the same kind a watermark or page number is — never a
         certificate-based digital signature. Nothing here is legally equivalent to an
@@ -330,7 +330,7 @@ function SignOverlay({ canvasSizePx, pageSizePt, page, rows, imageUrls, armedInd
   const onPage = rows.map((row, index) => ({ row, index })).filter(({ row }) => row.page === page);
 
   return (
-    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0 }} {...handlers}>
+    <div ref={containerRef} data-testid="pdf-overlay" style={{ position: "absolute", inset: 0, touchAction: "none" }} {...handlers}>
       {onPage.map(({ row, index }) => (
         <PlacedBox
           key={index}

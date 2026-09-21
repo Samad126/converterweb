@@ -27,9 +27,18 @@ export interface PdfToolShellProps {
   children?: React.ReactNode;
   /** Called with the extra fields this tool wants when the button is pressed. */
   onRun: () => void;
+  /**
+   * Disable Run for a reason only the tool's own fields know about — e.g.
+   * `/pdf/sign` and `/pdf/edit` need every placed element to be complete,
+   * `/pdf/redact` needs at least one area. `tool.canRun` only knows about
+   * the file and the request's own in-flight state, so without this a tool
+   * with nothing configured could still submit an empty elements/areas
+   * array and have the server reject it.
+   */
+  runDisabled?: boolean;
 }
 
-export function PdfToolShell({ tool, children, onRun }: PdfToolShellProps): React.ReactElement {
+export function PdfToolShell({ tool, children, onRun, runDisabled = false }: PdfToolShellProps): React.ReactElement {
   const { phase } = tool;
   const { health, healthFailure, recheckHealth } = useServiceHealth();
 
@@ -118,7 +127,7 @@ export function PdfToolShell({ tool, children, onRun }: PdfToolShellProps): Reac
             type="button"
             className="btn"
             onClick={onRun}
-            disabled={!tool.canRun || health !== "ready"}
+            disabled={!tool.canRun || health !== "ready" || runDisabled}
           >
             {phase.name === "running"
               ? phase.stage === "uploading"

@@ -145,7 +145,7 @@ export function EditTool(): React.ReactElement {
   }
 
   return (
-    <PdfToolShell tool={tool} onRun={onRun}>
+    <PdfToolShell tool={tool} onRun={onRun} runDisabled={!allValid}>
       <p className="meta">
         Every mark here is baked permanently into the page content — a visual edit, not an editable
         annotation layer and not a cryptographic signature.
@@ -345,7 +345,7 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
     <div
       ref={isFreehandArmed ? freehand.containerRef : containerRef}
       data-testid="pdf-overlay"
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, touchAction: "none" }}
       {...(isFreehandArmed ? freehand.handlers : handlers)}
     >
       {onPage.map(({ row, index }) =>
