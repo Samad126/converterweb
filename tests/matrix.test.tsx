@@ -203,13 +203,19 @@ describe("a matrix this build has never seen", () => {
     expect(alert).toHaveTextContent("Accepted: .docx, .xlsx.");
   });
 
-  it("advertises the server's extensions in the file input", async () => {
+  it("advertises the server's extensions and media types in the file input", async () => {
     server.use(http.get(`${BASE}/formats`, () => HttpResponse.json(SYNTHETIC)));
 
     await setupPage();
+    // Media types ride along with the extensions so a mobile picker that
+    // filters by MIME (Android's, especially with a cloud-storage source)
+    // doesn't hide every file — see `acceptAttribute` in `lib/formats.ts`.
     expect(
       document.querySelector<HTMLInputElement>('input[type="file"]'),
-    ).toHaveAttribute("accept", ".docx,.xlsx");
+    ).toHaveAttribute(
+      "accept",
+      ".docx,.xlsx,application/vnd.example.word,application/vnd.example.sheet",
+    );
   });
 });
 

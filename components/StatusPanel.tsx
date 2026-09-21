@@ -63,6 +63,8 @@ export interface StatusPanelProps {
   lockedTargetId: TargetId | null;
   /** The extensions this panel accepts — the matrix, unless the page narrowed it. */
   acceptedExtensions: readonly string[];
+  /** The `accept` attribute for the file input — extensions plus MIME hints. */
+  acceptAttribute: string;
   /** The most files one request may carry, and their combined size limit. */
   maxFiles: number;
   maxTotalBytes: number;
@@ -98,6 +100,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
     isLoadingPreview,
     lockedTargetId,
     acceptedExtensions,
+    acceptAttribute,
     maxFiles,
     maxTotalBytes,
     onAddFiles,
@@ -314,7 +317,7 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
             {files.length < maxFiles ? (
               <DropZone
                 id={FILE_INPUT_ID}
-                accept={acceptedExtensions.join(",")}
+                accept={acceptAttribute}
                 acceptedLabel={acceptedExtensions.join(", ")}
                 limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
                 disabled={busy}

@@ -93,14 +93,26 @@ export function acceptedExtensions(formats: FormatsResponse): string[] {
 }
 
 /**
- * The `accept` attribute for the file input.
+ * The `accept` attribute for the file input, narrowed to a subset of the
+ * matrix's extensions (a conversion page's own accepted list, or the whole
+ * matrix's).
  *
- * Extensions rather than MIME types: the extension is what selects the import
- * filter on the server, and a browser's idea of a document's MIME type is not
- * reliably the same as anyone else's.
+ * Extensions decide what the server does with the upload — the import filter
+ * is chosen by extension, not by whatever MIME type a browser guessed. But a
+ * mobile picker (Android's especially, and cloud-storage sources like Drive
+ * within it) filters the file list by MIME type first and can hide everything
+ * for an extensions-only `accept`, which looks exactly like "nothing happens"
+ * with no error at all. So each matching source's declared `mediaType` rides
+ * along as a second, permissive hint; the extension check in
+ * `validateCandidate` is still the one thing that actually decides what gets
+ * accepted.
  */
-export function acceptAttribute(formats: FormatsResponse): string {
-  return acceptedExtensions(formats).join(",");
+export function acceptAttribute(formats: FormatsResponse, extensions: readonly string[]): string {
+  const wanted = new Set(extensions.map((extension) => extension.toLowerCase()));
+  const mediaTypes = formats.sources
+    .filter((source) => wanted.has(source.extension.toLowerCase()))
+    .map((source) => source.mediaType);
+  return [...extensions, ...mediaTypes].join(",");
 }
 
 /** Whether this source can become this target, according to the matrix. */

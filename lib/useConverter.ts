@@ -46,6 +46,7 @@ import {
   rejectedFailure,
 } from "./errors";
 import {
+  acceptAttribute,
   acceptedExtensions as matrixExtensions,
   downloadExtension,
   expectedMediaType,
@@ -170,6 +171,12 @@ export interface Converter {
   lockedTargetId: TargetId | null;
   /** The extensions this instance accepts — the whole matrix, unless narrowed. */
   acceptedExtensions: readonly string[];
+  /**
+   * The `accept` attribute for the file input: `acceptedExtensions` plus each
+   * one's MIME type, so a mobile picker filtering by MIME doesn't hide every
+   * file. See `acceptAttribute` in `lib/formats.ts`.
+   */
+  acceptAttribute: string;
   /** The most files one request may carry, and their combined size limit. */
   maxFiles: number;
   maxTotalBytes: number;
@@ -738,6 +745,11 @@ export function useConverter(options?: ConverterOptions): Converter {
     [formats, offeredExtensions],
   );
 
+  const acceptAttr = useMemo<string>(
+    () => (formats === null ? accepted.join(",") : acceptAttribute(formats, accepted)),
+    [formats, accepted],
+  );
+
   return {
     formats,
     formatsFailure,
@@ -763,6 +775,7 @@ export function useConverter(options?: ConverterOptions): Converter {
 
     lockedTargetId,
     acceptedExtensions: accepted,
+    acceptAttribute: acceptAttr,
     maxFiles: MAX_CONVERT_FILES,
     maxTotalBytes: MAX_CONVERT_TOTAL_BYTES,
 

@@ -84,6 +84,7 @@ export function ConverterShell({
           isLoadingPreview={converter.isLoadingPreview}
           lockedTargetId={converter.lockedTargetId}
           acceptedExtensions={converter.acceptedExtensions}
+          acceptAttribute={converter.acceptAttribute}
           maxFiles={converter.maxFiles}
           maxTotalBytes={converter.maxTotalBytes}
           onSelectFile={converter.selectFile}

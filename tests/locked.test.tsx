@@ -62,7 +62,18 @@ describe("a page that is about one conversion", () => {
   it("offers only the extensions the page accepts in the file input", async () => {
     await setupLocked("pdf", WORD);
 
-    expect(fileInput()).toHaveAttribute("accept", ".docx,.doc,.docm");
+    // Media types ride along with the extensions — see `acceptAttribute` in
+    // `lib/formats.ts` — so a mobile picker filtering by MIME doesn't hide
+    // every file.
+    expect(fileInput()).toHaveAttribute(
+      "accept",
+      [
+        ".docx,.doc,.docm",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-word.document.macroEnabled.12",
+        "application/msword",
+      ].join(","),
+    );
     expect(screen.getByText(/\.docx, \.doc, \.docm/)).toBeInTheDocument();
   });
 
