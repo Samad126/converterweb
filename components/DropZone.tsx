@@ -51,10 +51,15 @@ export function DropZone({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const files = event.target.files;
-    // Reset first, so that choosing the same file twice fires `change` twice.
-    event.target.value = "";
     if (!files) return;
-    for (const file of Array.from(files)) onSelect(file);
+    // Snapshot before resetting: `files` is a live FileList, and on some
+    // mobile browsers (Android's especially, with content:// picker results)
+    // clearing `value` empties that same list in place, not just the input.
+    // Converting to an array first, then resetting, keeps re-choosing the
+    // same file able to fire `change` again without losing this selection.
+    const selected = Array.from(files);
+    event.target.value = "";
+    for (const file of selected) onSelect(file);
   };
 
   const handleDragEnter = (event: DragEvent<HTMLLabelElement>): void => {
