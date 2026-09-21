@@ -14,7 +14,7 @@ import { useState } from "react";
 
 import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
-import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import { PlacedBox, rectStylePercent, useNewRectDrag } from "@/components/pdf/placement";
 import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdfCoords";
 import { usePdfFileTool } from "@/lib/usePdfFileTool";
 
@@ -102,7 +102,7 @@ function RedactOverlay({ canvasSizePx, pageSizePt, page, areas, setAreas }: Reda
           onRemove={() => setAreas((current) => current.filter((_, i) => i !== index))}
         />
       ))}
-      {draftRect ? <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #dc2626" }} /> : null}
+      {draftRect ? <div style={{ ...rectStylePercent(draftRect, canvasSizePx), border: "2px dashed #dc2626" }} /> : null}
     </div>
   );
 }

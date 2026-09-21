@@ -28,6 +28,20 @@ function displayScale(box: { width: number; height: number }, canvasSizePx: Size
   };
 }
 
+/**
+ * A `Rect` in canvas-pixel space as inline `left`/`top`/`width`/`height` in
+ * percent of `canvasSizePx` — for the same reason `PlacedBox` positions
+ * itself in percent below: the overlay can be displayed smaller than
+ * `canvasSizePx`, so a literal pixel value would land in the wrong place.
+ */
+export function rectStylePercent(rect: Rect, canvasSizePx: Size): React.CSSProperties {
+  const left = canvasSizePx.width === 0 ? 0 : (rect.x / canvasSizePx.width) * 100;
+  const top = canvasSizePx.height === 0 ? 0 : (rect.y / canvasSizePx.height) * 100;
+  const width = canvasSizePx.width === 0 ? 0 : (rect.width / canvasSizePx.width) * 100;
+  const height = canvasSizePx.height === 0 ? 0 : (rect.height / canvasSizePx.height) * 100;
+  return { position: "absolute", left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` };
+}
+
 function pointFromEvent(container: HTMLElement, event: React.PointerEvent, canvasSizePx: Size): Point {
   const box = container.getBoundingClientRect();
   const { sx, sy } = displayScale(box, canvasSizePx);
@@ -84,6 +98,8 @@ export interface PlacedBoxProps {
   label?: string;
   color?: string;
   className?: string;
+  /** A preview of what the element will actually contain — typed text, or an image. */
+  children?: React.ReactNode;
   /**
    * The overlay's container element and its coordinate-space size, so a drag
    * delta measured in *displayed* client pixels can be rescaled into
@@ -101,6 +117,7 @@ export function PlacedBox({
   label,
   color = "#2563eb",
   className,
+  children,
   containerRef,
   canvasSizePx,
 }: PlacedBoxProps): React.ReactElement {
@@ -137,20 +154,18 @@ export function PlacedBox({
     <div
       className={className}
       style={{
-        position: "absolute",
-        left: rect.x,
-        top: rect.y,
-        width: rect.width,
-        height: rect.height,
+        ...rectStylePercent(rect, canvasSizePx),
         border: `2px solid ${color}`,
         background: `${color}22`,
         cursor: "move",
         boxSizing: "border-box",
+        overflow: "hidden",
       }}
       onPointerDown={onBodyPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
+      {children}
       {label ? (
         <span style={{ position: "absolute", top: -20, left: 0, fontSize: 11, color, whiteSpace: "nowrap" }}>{label}</span>
       ) : null}

@@ -16,7 +16,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
-import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import { PlacedBox, rectStylePercent, useNewRectDrag } from "@/components/pdf/placement";
 import {
   pagePointToPixelPoint,
   pixelPointToPagePoint,
@@ -365,7 +365,7 @@ function EditOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
         ),
       )}
       {draftRect ? (
-        <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #2563eb" }} />
+        <div style={{ ...rectStylePercent(draftRect, canvasSizePx), border: "2px dashed #2563eb" }} />
       ) : null}
       {freehand.draftPoints.length >= 2 ? (
         <svg

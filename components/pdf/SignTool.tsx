@@ -11,11 +11,11 @@
  * a default box on page 1 so the tool is usable before any dragging happens;
  * dragging only replaces that default.
  */
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PdfPagePreview } from "@/components/PdfPagePreview";
 import { PdfToolShell } from "@/components/PdfToolShell";
-import { PlacedBox, useNewRectDrag } from "@/components/pdf/placement";
+import { PlacedBox, rectStylePercent, useNewRectDrag } from "@/components/pdf/placement";
 import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdfCoords";
 import { usePdfFileTool } from "@/lib/usePdfFileTool";
 import type { PdfPart } from "@/lib/pdfApi";
@@ -52,6 +52,48 @@ const REQUIRES_IMAGE_ONLY: readonly SignElementType[] = ["stamp"];
 const TYPED_ONLY: readonly SignElementType[] = ["name", "date", "text"];
 const EITHER: readonly SignElementType[] = ["signature", "initials"];
 
+/** A rough visual stand-in for the server's actual font choice, per style. */
+const FONT_FAMILY: Record<FontStyle, string> = {
+  cursive: "'Brush Script MT', 'Segoe Script', cursive",
+  cursive2: "'Lucida Handwriting', 'Comic Sans MS', cursive",
+  plain: "Arial, Helvetica, sans-serif",
+};
+
+/** What a row will actually stamp, shown inside its box — not just an empty rectangle. */
+function rowPreview(row: SignRow, imageUrls: readonly string[]): React.ReactNode {
+  const usesImage = REQUIRES_IMAGE_ONLY.includes(row.type) || (EITHER.includes(row.type) && row.source === "image");
+  if (usesImage) {
+    if (row.imageIndex === null) return null;
+    const src = imageUrls[row.imageIndex];
+    return src ? (
+      <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "none" }} />
+    ) : null;
+  }
+
+  if (row.value.trim() === "") return null;
+  const isScript = EITHER.includes(row.type);
+  return (
+    <span
+      style={{
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis",
+        pointerEvents: "none",
+        fontFamily: isScript ? FONT_FAMILY[row.fontStyle] : "Arial, Helvetica, sans-serif",
+        color: isScript ? (row.color === "black" ? "#000" : row.color) : "#000",
+        fontSize: 14,
+      }}
+    >
+      {row.value}
+    </span>
+  );
+}
+
 export function SignTool(): React.ReactElement {
   const tool = usePdfFileTool("/pdf/sign");
   const [rows, setRows] = useState<SignRow[]>([emptyRow(1)]);
@@ -62,6 +104,16 @@ export function SignTool(): React.ReactElement {
   const updateRow = (index: number, patch: Partial<SignRow>): void => {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
+
+  // One object URL per uploaded image, for the box preview below — revoked
+  // whenever the image list changes so choosing more images doesn't leak
+  // the URLs of the ones already shown.
+  const imageUrls = useMemo(() => images.map((image) => URL.createObjectURL(image)), [images]);
+  useEffect(() => {
+    return () => {
+      for (const url of imageUrls) URL.revokeObjectURL(url);
+    };
+  }, [imageUrls]);
 
   function buildElement(row: SignRow): Record<string, unknown> | null {
     if (row.rect.width <= 0 || row.rect.height <= 0) return null;
@@ -104,6 +156,7 @@ export function SignTool(): React.ReactElement {
         pageSizePt={pageSizePt}
         page={page}
         rows={rows}
+        imageUrls={imageUrls}
         armedIndex={armedIndex}
         setArmedIndex={setArmedIndex}
         updateRow={updateRow}
@@ -261,12 +314,13 @@ interface SignOverlayProps {
   pageSizePt: Size;
   page: number;
   rows: SignRow[];
+  imageUrls: readonly string[];
   armedIndex: number | null;
   setArmedIndex: (index: number | null) => void;
   updateRow: (index: number, patch: Partial<SignRow>) => void;
 }
 
-function SignOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArmedIndex, updateRow }: SignOverlayProps): React.ReactElement {
+function SignOverlay({ canvasSizePx, pageSizePt, page, rows, imageUrls, armedIndex, setArmedIndex, updateRow }: SignOverlayProps): React.ReactElement {
   const { containerRef, draftRect, handlers } = useNewRectDrag(armedIndex !== null, canvasSizePx, (pixelRect) => {
     if (armedIndex === null) return;
     updateRow(armedIndex, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) });
@@ -285,10 +339,12 @@ function SignOverlay({ canvasSizePx, pageSizePt, page, rows, armedIndex, setArme
           containerRef={containerRef}
           canvasSizePx={canvasSizePx}
           onChange={(pixelRect) => updateRow(index, { rect: pixelRectToPointRect(pixelRect, canvasSizePx, pageSizePt) })}
-        />
+        >
+          {rowPreview(row, imageUrls)}
+        </PlacedBox>
       ))}
       {draftRect ? (
-        <div style={{ position: "absolute", left: draftRect.x, top: draftRect.y, width: draftRect.width, height: draftRect.height, border: "2px dashed #2563eb" }} />
+        <div style={{ ...rectStylePercent(draftRect, canvasSizePx), border: "2px dashed #2563eb" }} />
       ) : null}
     </div>
   );
