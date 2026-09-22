@@ -6,12 +6,15 @@
  * grouped by job-to-be-done. This is presentation grouping only — it invents
  * no route, no capability and no data. `Convert` doesn't enumerate all 36
  * catalog pairs (that's `/conversions`'s job); it shows `POPULAR` and points
- * at the index. The four PDF categories partition `PDF_TOOLS` exhaustively —
+ * at the index, and `Audio`/`Video` do the same with a handful of media pairs
+ * each (their 210/182-page enumerations are `/audio`'s and `/video`'s job).
+ * The four PDF categories partition `PDF_TOOLS` exhaustively —
  * `tests/categories.test.ts` checks every id lands in exactly one group, so a
  * new tool silently missing a category fails the suite instead of the review.
  */
 import { CATALOG, EXTRA_TOOLS, POPULAR } from "./catalog";
 import { PDF_TOOLS } from "./pdfTools";
+import { POPULAR_AUDIO, POPULAR_VIDEO } from "./mediaCatalog";
 
 export interface CategoryItem {
   id: string;
@@ -102,6 +105,40 @@ export const CATEGORIES: readonly Category[] = [
       label: tool.label,
       blurb: `Accepts ${tool.extensions.join(", ")}.`,
       route: tool.route,
+    })),
+  },
+  {
+    // Media is its own pair of families with its own hubs, and the two
+    // categories here are what make `/audio` and `/video` reachable from the
+    // header menu, the mobile menu and the homepage grid. `items` is a
+    // handful of popular pairings rather than a full partition — the same
+    // shape `convert` uses, and for the same reason: enumerating 210 and 182
+    // pages is the hubs' job. Sources are resolved through `POPULAR_AUDIO`/
+    // `POPULAR_VIDEO`, so a slug renamed in `lib/mediaCatalog.ts` throws at
+    // import rather than rendering a dead link.
+    id: "audio",
+    label: "Audio",
+    lede: "Convert between MP3, WAV, FLAC, M4A and other audio formats.",
+    seeAllHref: "/audio",
+    seeAllLabel: "All audio conversions",
+    items: POPULAR_AUDIO.map((entry) => ({
+      id: entry.slug,
+      label: entry.heading,
+      blurb: `A ${entry.target.label} file, converted in the background.`,
+      route: entry.route,
+    })),
+  },
+  {
+    id: "video",
+    label: "Video",
+    lede: "Convert between MP4, WEBM, MKV, MOV and other video formats.",
+    seeAllHref: "/video",
+    seeAllLabel: "All video conversions",
+    items: POPULAR_VIDEO.map((entry) => ({
+      id: entry.slug,
+      label: entry.heading,
+      blurb: `A ${entry.target.label} file, converted in the background.`,
+      route: entry.route,
     })),
   },
 ];

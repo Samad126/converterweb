@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { ToolSearch } from "@/components/ToolSearch";
 import { CATALOG, HOME_FAQS } from "@/lib/catalog";
 import { CATEGORIES } from "@/lib/categories";
+import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/mediaCatalog";
 import { PDF_TOOLS } from "@/lib/pdfTools";
 import { faqPage, itemList } from "@/lib/schema";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
@@ -63,10 +64,11 @@ export default function HomePage(): React.ReactElement {
           </h1>
           <p className="hero-lede">
             Convert documents, spreadsheets, presentations and images into PDF —
-            and between each other — without installing anything, making an
-            account, or leaving a copy behind. {SITE_NAME} runs the conversion on
-            a server, hands the result straight back, and deletes the file before
-            the response is even sent.
+            and between each other — and transcode audio and video between
+            formats, without installing anything, making an account, or leaving
+            a copy behind. {SITE_NAME} runs the conversion on a server, hands the
+            result straight back, and deletes the file before the response is
+            even sent.
           </p>
           <div className="hero-search mt-6">
             <Suspense fallback={<div className="tool-search-input" aria-hidden="true" />}>
@@ -79,17 +81,22 @@ export default function HomePage(): React.ReactElement {
             </Link>
           </p>
 
-          {/* Counted, never written down: both figures come from the same
+          {/* Counted, never written down: all four figures come from the same
               registries the pages themselves are built from, so a conversion
               added tomorrow changes this number without anyone remembering to.
 
               `column-reverse` puts the figure above its label while the DOM
               keeps the `dt`-then-`dd` order a definition list requires — so a
-              screen reader hears "Conversions, 36" rather than a bare number. */}
+              screen reader hears "Document conversions, 36" rather than a bare
+              number. */}
           <dl className="hero-stats">
             <div className="stat">
-              <dt className="stat-label">Conversions</dt>
+              <dt className="stat-label">Document conversions</dt>
               <dd className="stat-value">{CATALOG.length}</dd>
+            </div>
+            <div className="stat">
+              <dt className="stat-label">Audio &amp; video</dt>
+              <dd className="stat-value">{AUDIO_CATALOG.length + VIDEO_CATALOG.length}</dd>
             </div>
             <div className="stat">
               <dt className="stat-label">PDF tools</dt>

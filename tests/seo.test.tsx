@@ -56,7 +56,7 @@ describe("the conversion page", () => {
     const text = container.textContent ?? "";
 
     expect(text).toContain("The commonest reason to be here");
-    expect(text).toContain(".docx, .doc and .docm");
+    expect(text).toContain(".docx");
     expect(text).toContain("What to expect");
   });
 

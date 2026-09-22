@@ -64,7 +64,7 @@ export default function ConversionsPage(): React.ReactElement {
       </div>
 
       {families.map((group) => (
-        <section key={group.family} className="mt-12">
+        <section key={group.key} className="mt-12">
           <h2 className="section-title">{group.label}</h2>
           <div className="tool-grid mt-5">
             {group.entries.map((entry) => (

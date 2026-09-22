@@ -16,6 +16,11 @@
  *     `psd-to-layers`). Named there, not here, so their extensions live in
  *     the one file `tests/matrix.test.tsx` already exempts as editorial
  *     content, rather than needing a second exemption for a second file.
+ *   - `lib/mediaCatalog.ts` (`MEDIA_CATALOG`) — the `/audio/*` and `/video/*`
+ *     pairs. These are *not* in `GET /formats`: the document matrix and the
+ *     media matrix are separate backend facilities, so this is the one group
+ *     whose extensions and media types are read from their own table rather
+ *     than the live response.
  *
  * Nothing here claims a capability: a disabled target still gets found by
  * search exactly as it does today, and reachability is still decided, at
@@ -24,6 +29,7 @@
 import { CATALOG, EXTRA_TOOLS } from "../catalog";
 import type { FormatsResponse } from "../contract";
 import { findTarget, normalizeMediaType } from "../formats";
+import { MEDIA_CATALOG } from "../mediaCatalog";
 import { PDF_TOOLS } from "../pdfTools";
 import { synonymsFor } from "./aliases";
 import type { SearchItem } from "./types";
@@ -77,6 +83,18 @@ export function buildSearchIndex(formats: FormatsResponse): SearchItem[] {
       extensions: lower(tool.extensions),
       mimeTypes: [],
       synonyms: synonymsFor([tool.id]),
+    });
+  }
+
+  for (const entry of MEDIA_CATALOG) {
+    items.push({
+      id: `media:${entry.kind}:${entry.slug}`,
+      kind: "media",
+      label: entry.heading,
+      route: entry.route,
+      extensions: lower([entry.source.extension, entry.target.extension]),
+      mimeTypes: [normalizeMediaType(entry.target.mediaType)],
+      synonyms: synonymsFor([entry.source.id, entry.target.id, entry.kind]),
     });
   }
 

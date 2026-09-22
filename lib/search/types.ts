@@ -6,7 +6,7 @@
  * the static tool registries, and everything after that is a pure, local,
  * synchronous filter over this array.
  */
-export type SearchItemKind = "conversion" | "pdf-tool" | "tool";
+export type SearchItemKind = "conversion" | "pdf-tool" | "tool" | "media";
 
 export interface SearchItem {
   /** Stable, unique across the whole index — `"conversion:word_to_pdf"`. */

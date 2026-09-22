@@ -25,6 +25,25 @@ export const SYNONYMS: Readonly<Record<string, readonly string[]>> = {
   presentation: ["ppt", "pptx", "odp"],
   photoshop: ["psd"],
   psd: ["photoshop"],
+  // Media. Nothing here claims a transcode is possible — it only widens
+  // matching, so "song" finds the audio pairs and "movie" finds the video ones
+  // the same way "spreadsheet" already finds the xlsx pages.
+  audio: ["mp3", "wav", "flac", "m4a", "aac", "ogg"],
+  song: ["mp3", "wav", "flac", "audio"],
+  music: ["mp3", "wav", "flac", "audio"],
+  wav: ["audio"],
+  flac: ["audio"],
+  m4a: ["audio"],
+  aac: ["audio"],
+  ogg: ["audio"],
+  opus: ["audio"],
+  video: ["mp4", "webm", "mkv", "mov", "avi"],
+  movie: ["mp4", "webm", "mkv", "mov", "video"],
+  mp4: ["video"],
+  webm: ["video"],
+  mkv: ["video"],
+  mov: ["video"],
+  avi: ["video"],
 };
 
 /** Every synonym reachable from any of `words`, deduplicated. */

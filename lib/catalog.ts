@@ -410,7 +410,7 @@ export const SOURCES: readonly SourceGroup[] = [
     // Same reasoning again: these can reach `pptx` as an extra target.
     key: "ppt",
     label: "PowerPoint (legacy)",
-    noun: "older PowerPoint presentations",
+    noun: "older PowerPoint decks",
     extensions: [".ppt", ".pptm", ".pps", ".ppsx", ".pot", ".potx"],
     family: "impress",
     badge: "P",
@@ -1132,25 +1132,42 @@ export function otherSourcesFor(entry: ConversionEntry): readonly ConversionEntr
 /**
  * The catalog grouped by family, in `SOURCES` order — how the homepage grid and
  * the index page are laid out.
+ *
+ * The markup group (pandoc, not LibreOffice) has no `family`, so it cannot be
+ * grouped by one — but it still has six pages that have to be reachable from
+ * somewhere, or they are orphans the sitemap alone cannot rescue. It is grouped
+ * here under its own `label`, keyed by its source key, so the footer and the
+ * index link it alongside the four LibreOffice families.
+ *
+ * `key` is the grouping key (`"writer"`, `"markup"`), not the family, precisely
+ * because the family is `undefined` for one of the groups returned.
  */
 export function entriesByFamily(): ReadonlyArray<{
-  family: Family;
+  key: string;
   label: string;
   entries: readonly ConversionEntry[];
 }> {
-  // `undefined` (the markup group — pandoc, not LibreOffice) has no
-  // `FAMILY_LABELS` entry and no homepage pill; it is still reachable, from
-  // `/conversions` and the sitemap, just not grouped here.
   const families = SOURCES.map((group) => group.family).filter(
     (family, index, all): family is Family => family !== undefined && all.indexOf(family) === index,
   );
 
-  return families.map((family) => ({
-    family,
+  const grouped = families.map((family) => ({
+    key: family as string,
     label: FAMILY_LABELS[family],
     entries: CATALOG.filter((entry) => entry.source.family === family),
   }));
+
+  // The family-less sources (the markup group), one section each, under its own
+  // `label` — so nothing the catalog publishes is left unreachable from here.
+  const ungrouped = SOURCES.filter((group) => group.family === undefined).map((group) => ({
+    key: group.key,
+    label: group.label,
+    entries: CATALOG.filter((entry) => entry.source.key === group.key),
+  }));
+
+  return [...grouped, ...ungrouped.filter((group) => group.entries.length > 0)];
 }
+
 
 /**
  * The conversions linked from the header, the footer and the 404.
