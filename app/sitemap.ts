@@ -1,16 +1,18 @@
 import type { MetadataRoute } from "next";
 
 import { SLUGS } from "@/lib/catalog";
+import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/mediaCatalog";
 import { absoluteUrl } from "@/lib/site";
 
 /**
  * The sitemap.
  *
- * Thirty-eight URLs: the homepage, the index, and one per conversion. The
- * conversion pages are `priority: 0.8` rather than the homepage's `1` because
- * they are the pages that earn the traffic and the homepage is the page that
- * routes it — but priority is a hint Google has said it ignores, so the ordering
- * here is documentation for the next reader rather than a lever.
+ * The homepage, the three hubs (`/conversions`, `/audio`, `/video`), and one
+ * URL per conversion — 36 document pairs plus 392 audio/video pairs. The
+ * conversion pages are `priority: 0.8`/`0.7` rather than the homepage's `1`
+ * because they are the pages that earn the traffic and the homepage is the
+ * page that routes it — but priority is a hint Google has said it ignores, so
+ * the ordering here is documentation for the next reader rather than a lever.
  *
  * `lastModified` is the build time. These pages are generated from a catalog
  * that only changes when the code does, so the build is exactly when the content
@@ -37,6 +39,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.8,
+    })),
+    {
+      url: absoluteUrl("/audio"),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: absoluteUrl("/video"),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    ...AUDIO_CATALOG.map((entry) => ({
+      url: absoluteUrl(entry.route),
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...VIDEO_CATALOG.map((entry) => ({
+      url: absoluteUrl(entry.route),
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
   ];
 }

@@ -38,7 +38,7 @@ export interface ToolGridProps {
 export function ToolGrid({ entries, name = "family" }: ToolGridProps): React.ReactElement {
   const families = entries
     .map((entry) => entry.source.family)
-    .filter((family, index, all) => all.indexOf(family) === index);
+    .filter((family, index, all): family is Family => family !== undefined && all.indexOf(family) === index);
 
   return (
     <div className="tool-browser">

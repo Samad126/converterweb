@@ -44,6 +44,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media/{target}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an asynchronous audio/video conversion job
+         * @description Accepts one audio or video file and starts converting it to `target`
+         *     in the background, answering `202` with a job id the moment the
+         *     upload is validated - it does NOT wait for the conversion to finish.
+         *     Poll `GET /media/jobs/{id}` for status, and
+         *     `GET /media/jobs/{id}/download` once it reports `done`.
+         *
+         *     This is a separate endpoint from `POST /convert/{target}` on purpose:
+         *     a real audio/video transcode routinely runs far longer than that
+         *     endpoint's deadline, and needs an upload ceiling far above the 25MB
+         *     the Android client's wire contract fixes for `/convert`. Nothing
+         *     about `/convert/{target}`'s existing contract changes because of this
+         *     endpoint.
+         *
+         *     `target` and the source extension must be the same KIND (audio to
+         *     audio, video to video) and must differ from one another - converting
+         *     a file to its own format is refused the same way it is everywhere
+         *     else in this service.
+         *
+         *     Audio: `mp3`, `wav`, `flac`, `ogg`, `aac`, `m4a`, `wma`.
+         *     Video: `mp4`, `webm`, `mkv`, `avi`, `mov`, `flv`. This is a smaller
+         *     set than audio/video formats could in principle cover - see
+         *     `formats-media.ts`'s own comment for the reasoning and the wider list
+         *     a future pass could verify and add.
+         */
+        post: operations["convertMediaToFormat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the status of an asynchronous media job */
+        get: operations["getMediaJobStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/jobs/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a finished media job's result
+         * @description Returns the converted file once the job's status is `done`. A job
+         *     whose status is `queued`/`running` answers `409`; one whose status
+         *     is `failed` answers with the same error envelope its own status
+         *     response carries, at the status code that failure would have used
+         *     had it happened synchronously (`500` for `E_CONVERT_FAILED`, `504`
+         *     for `E_TIMEOUT`, and so on).
+         */
+        get: operations["downloadMediaJobResult"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pdf/merge": {
         parameters: {
             query?: never;
@@ -777,13 +861,48 @@ export interface components {
          *     and returned by `GET /formats`.
          * @enum {string}
          */
-        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg" | "tables" | "layers" | "pdfa" | "markdown";
+        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg" | "tables" | "layers" | "pdfa" | "markdown" | "zip" | "tar" | "tar.gz" | "tar.bz2" | "7z" | "cbz" | "srt" | "vtt" | "ass" | "ssa" | "tsv" | "json" | "yaml" | "jsonl" | "bmp" | "gif" | "tiff" | "webp" | "avif" | "ico" | "png-image" | "jpg-image";
+        /**
+         * @description Identifier of an audio/video output format, as used in the
+         *     `/media/{target}` path - a separate id space from `TargetId`, since
+         *     this is a separate matrix (`formats-media.ts`), not an extension of
+         *     the main one.
+         * @enum {string}
+         */
+        MediaTargetId: "mp3" | "wav" | "flac" | "ogg" | "aac" | "m4a" | "wma" | "opus" | "aiff" | "m4b" | "ac3" | "au" | "caf" | "oga" | "voc" | "mp4" | "webm" | "mkv" | "avi" | "mov" | "flv" | "asf" | "f4v" | "m4v" | "mpeg" | "ogv" | "ts" | "wmv";
+        /** @enum {string} */
+        MediaJobStatusValue: "queued" | "running" | "done" | "failed";
+        MediaJobAccepted: {
+            /** @description The job id - pass this to `GET /media/jobs/{id}` and its `/download`. */
+            id: string;
+            status: components["schemas"]["MediaJobStatusValue"];
+            /** @description Always `/media/jobs/{id}`, given back so a client does not have to build it itself. */
+            statusUrl: string;
+        };
+        MediaJobStatus: {
+            id: string;
+            status: components["schemas"]["MediaJobStatusValue"];
+            target: components["schemas"]["MediaTargetId"];
+            /** @description Present only when `status` is `done`. */
+            downloadUrl?: string;
+            /** @description The converted file's size, in bytes. Present only when `status` is `done`. */
+            bytes?: number;
+            /**
+             * @description Present only when `status` is `failed` - the same `{code,
+             *     message}` shape `ErrorEnvelope.error` carries, not wrapped in a
+             *     second `error` key.
+             */
+            error?: {
+                code: components["schemas"]["ErrorCode"];
+                message: string;
+            };
+        };
         /**
          * @description Stable machine-readable identifier for the failure. For logs, metrics
          *     and support only - the client never shows this to the user.
          * @enum {string}
          */
-        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_NO_TABLES" | "E_NO_LAYERS" | "E_BAD_PAGE_RANGE" | "E_TOO_FEW_FILES" | "E_WRONG_PASSWORD" | "E_INVALID_FIELD" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL";
+        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_NO_TABLES" | "E_NO_LAYERS" | "E_NOT_TABULAR" | "E_BAD_PAGE_RANGE" | "E_TOO_FEW_FILES" | "E_WRONG_PASSWORD" | "E_INVALID_FIELD" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL" | "E_JOB_NOT_FOUND" | "E_JOB_NOT_READY";
         /**
          * @description The body of every non-2xx response. There are no exceptions: error
          *     paths that Express or multer would normally render as an HTML page are
@@ -989,7 +1108,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNKNOWN_TARGET",
-                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG, XLSX (tables), PNG (layers), PDF/A, Markdown."
+                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG, XLSX (tables), PNG (layers), PDF/A, Markdown, ZIP, TAR, TAR.GZ, TAR.BZ2, 7Z, CBZ, SRT, VTT, ASS, SSA, TSV, JSON, YAML, JSONL, BMP, GIF, TIFF, WEBP, AVIF, ICO, PNG (image), JPG (image)."
                  *       }
                  *     }
                  */
@@ -1037,7 +1156,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNSUPPORTED",
-                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .odt, .ods, .odp, .xlsx, .pptx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg, .psd, .pdf."
+                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .dot, .dotx, .odt, .ods, .odg, .odp, .xlsx, .xls, .xlsm, .pptx, .ppt, .pptm, .pps, .ppsx, .pot, .potx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg, .psd, .pdf, .md, .rst, .tex, .textile, .org, .opml, .muse, .ipynb, .zip, .tar, .tgz, .tbz2, .txz, .gz, .bz2, .xz, .7z, .iso, .cbz, .bmp, .gif, .tiff, .webp, .avif, .ico, .srt, .vtt, .ass, .ssa, .tsv, .json, .yaml, .yml, .jsonl."
                  *       }
                  *     }
                  */
@@ -1088,6 +1207,12 @@ export interface components {
          *     truth is that it is a perfectly good document with no tables in it, or
          *     one whose layers are all adjustment and text layers and therefore have
          *     no pixels to write.
+         *
+         *     **Not a table.** A `csv`/`tsv`/`jsonl` request against a JSON/YAML
+         *     source whose content is not shaped for that target - a single object
+         *     rather than a top-level array, or nesting a delimited format has no
+         *     way to represent. The same reasoning as no-tables/no-layers: the
+         *     document is valid, just not shaped for what was asked of it.
          */
         Unprocessable: {
             headers: {
@@ -1159,6 +1284,48 @@ export interface components {
                  *       "error": {
                  *         "code": "E_WRONG_PASSWORD",
                  *         "message": "That password does not unlock this PDF."
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description `GET /media/jobs/{id}` (or its `/download`) named a job id that does
+         *     not exist - never did, or was removed after `MEDIA_JOB_TTL_MS` past
+         *     completion.
+         */
+        JobNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "E_JOB_NOT_FOUND",
+                 *         "message": "That conversion job does not exist."
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /**
+         * @description `GET /media/jobs/{id}/download` was called before the job reached
+         *     `done`. Poll `GET /media/jobs/{id}` until its `status` is `done` (or
+         *     `failed`) before downloading.
+         */
+        JobNotReady: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": {
+                 *         "code": "E_JOB_NOT_READY",
+                 *         "message": "This conversion is still in progress. Check back in a moment."
                  *       }
                  *     }
                  */
@@ -1712,6 +1879,111 @@ export interface operations {
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ConvertFailed"];
             503: components["responses"]["Busy"];
+            504: components["responses"]["Timeout"];
+        };
+    };
+    convertMediaToFormat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description One of the audio/video target ids listed above. Case-sensitive. */
+                target: components["schemas"]["MediaTargetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Exactly one audio or video file.
+                     */
+                    files: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The job was accepted and is now queued or running. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaJobAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description `target` is not a recognised audio/video format id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "E_UNKNOWN_TARGET",
+                     *         "message": "That is not an audio/video format this converter can produce."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedTarget"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    getMediaJobStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job's current status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaJobStatus"];
+                };
+            };
+            404: components["responses"]["JobNotFound"];
+        };
+    };
+    downloadMediaJobResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The converted audio/video file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/*": unknown;
+                    "video/*": unknown;
+                };
+            };
+            404: components["responses"]["JobNotFound"];
+            409: components["responses"]["JobNotReady"];
+            500: components["responses"]["ConvertFailed"];
             504: components["responses"]["Timeout"];
         };
     };

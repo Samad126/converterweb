@@ -26,6 +26,7 @@ import {
   SOURCES,
   findEntry,
   slugFor,
+  type DocTargetId,
 } from "@/lib/catalog";
 import type { FormatsResponse, TargetId } from "@/lib/contract";
 
@@ -146,10 +147,13 @@ describe("the catalog against the matrix", () => {
   it("groups extensions that the service puts in the same family", () => {
     for (const group of SOURCES) {
       for (const extension of group.extensions) {
+        // `?? null` on both sides: the fixture reports `null` for a source
+        // pandoc handles (no LibreOffice family), and `SourceGroup.family`
+        // is `undefined` for the same case — see its own comment for why.
         expect(
-          sourceByExtension.get(extension)?.family,
+          sourceByExtension.get(extension)?.family ?? null,
           `${group.key} claims family ${group.family} for ${extension}`,
-        ).toBe(group.family);
+        ).toBe(group.family ?? null);
       }
     }
   });
@@ -168,20 +172,24 @@ describe("the catalog against the matrix", () => {
       const first = sourceByExtension.get(group.extensions[0] ?? "");
       return (first?.targets ?? [])
         .filter((target) => !STANDALONE_EXTRACTION_TARGETS.has(target))
-        .map((target) => slugFor(group.key, target));
+        // Every group this file iterates is one `lib/catalog.ts` owns prose
+        // for, so its targets are always a `DocTargetId` in practice — the
+        // fixture's own type is the wider, all-families `TargetId`.
+        .map((target) => slugFor(group.key, target as DocTargetId));
     });
 
     expect([...expected].sort()).toEqual([...SLUGS].sort());
   });
 
-  it("never treats PDF as an input", () => {
-    // The service has no `.pdf` source, so no page may imply one. This is the
-    // expectation every other converter trains people to have, so it is worth
-    // asserting rather than assuming.
-    expect(acceptedExtensions).not.toContain(".pdf");
+  it("accepts a PDF upload only on the PDF-as-source pages, never on a page that also produces PDF", () => {
+    // PDF *is* a source now (`pdf_to_docx` and its siblings) — the service
+    // extracts a PDF's own content back out. What is still true: no page both
+    // accepts a PDF and produces one (`entry.target` "pdf" already implies
+    // `entry.source.key !== "pdf"` via the generic no-self-conversion check
+    // above), and no page *other than* the dedicated `pdf` group accepts one.
     for (const entry of CATALOG) {
-      expect(entry.source.extensions).not.toContain(".pdf");
-      expect(entry.source.key).not.toBe("pdf");
+      if (entry.source.key === "pdf") continue;
+      expect(entry.source.extensions, `${entry.slug} accepts a PDF upload`).not.toContain(".pdf");
     }
   });
 });
@@ -271,11 +279,11 @@ describe("the catalog's helper functions", () => {
 describe("the fixture this file trusts", () => {
   it("still describes a service with many sources and targets", () => {
     expect(MATRIX.sources.length).toBeGreaterThanOrEqual(16);
-    expect(MATRIX.targets.length).toBe(16);
+    expect(MATRIX.targets.length).toBeGreaterThanOrEqual(16);
   });
 
-  it("still says PDF is an output and not an input", () => {
-    expect(MATRIX.sources.map((source) => source.extension)).not.toContain(".pdf");
+  it("still says PDF is a target, and now also a source", () => {
+    expect(MATRIX.sources.map((source) => source.extension)).toContain(".pdf");
     expect([...targetIds] as TargetId[]).toContain("pdf");
   });
 });

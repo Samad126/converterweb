@@ -21,6 +21,7 @@ import ConversionsPage from "@/app/conversions/page";
 import HomePage from "@/app/page";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CATALOG, SLUGS } from "@/lib/catalog";
+import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/mediaCatalog";
 import sitemap from "@/app/sitemap";
 
 /** Render `/word_to_pdf` the way Next would, and give back the element tree. */
@@ -182,12 +183,22 @@ describe("the routes", () => {
   it("has a sitemap entry for every page, and nothing that 404s", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
 
-    expect(urls).toHaveLength(SLUGS.length + 2);
+    expect(urls).toHaveLength(
+      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + 4,
+    );
     for (const slug of SLUGS) {
       expect(urls).toContain(`/${slug}`);
     }
+    for (const entry of AUDIO_CATALOG) {
+      expect(urls).toContain(entry.route);
+    }
+    for (const entry of VIDEO_CATALOG) {
+      expect(urls).toContain(entry.route);
+    }
     expect(urls).toContain("/");
     expect(urls).toContain("/conversions");
+    expect(urls).toContain("/audio");
+    expect(urls).toContain("/video");
     // The page that was removed when the landing page took over the root.
     expect(urls).not.toContain("/convert");
   });

@@ -30,9 +30,12 @@
  *      perform fails the suite.
  *
  * The one thing that must not happen is a page for a conversion that does not
- * exist. Note in particular that **PDF is never a source**: there is no `.pdf`
- * entry in the service's `SOURCES`, so `pdf_to_word` and its relatives have no
- * page here, and the homepage copy never implies otherwise.
+ * exist. PDF **used to** never be a source — an earlier version of the
+ * service had no `.pdf` entry in `SOURCES` at all — but the service now
+ * extracts a PDF's own content back out (`pdf_to_docx` and its siblings,
+ * below), so that is no longer an invariant this file enforces. What is
+ * still true: PDF never converts to itself, and a PDF's own pages
+ * (`word_to_pdf` and so on) still only ever *produce* PDF, never accept one.
  *
  * ---------------------------------------------------------------------------
  * How the prose is composed
@@ -82,7 +85,14 @@ export interface SourceGroup {
   noun: string;
   /** Every extension this page accepts. */
   extensions: readonly string[];
-  family: Family;
+  /**
+   * `undefined` for a source the service handles with its own code rather
+   * than LibreOffice — `GET /formats` reports `family: null` for these (see
+   * `lib/contract.ts`'s note on the same field). The markup-conversion group
+   * below is the one user of this: pandoc has no notion of the LibreOffice
+   * families, so there is nothing honest to put here.
+   */
+  family?: Family;
   /** The monogram drawn in the card's badge. */
   badge: string;
   /** One sentence about the format, reused across its pages. */
@@ -109,14 +119,49 @@ export interface TargetNote {
 }
 
 /**
- * Every target the service can produce, with its prose.
+ * The document-family targets this file owns prose for.
  *
- * Exhaustive on purpose. `TargetId` is generated from the contract, so adding a
- * format to the service and regenerating the types makes this object fail to
- * compile — which is the correct moment to decide what the new page says, and
- * is exactly the "loudly, at compile time" the rest of this app aims for.
+ * `TargetId` now also carries the archive, subtitle, data-interchange and
+ * raster-image targets that `lib/imageCatalog.ts`, `lib/archiveCatalog.ts`,
+ * `lib/subtitleCatalog.ts` and `lib/dataCatalog.ts` own instead — each of
+ * those is its own family with its own route prefix and its own exhaustive
+ * table, mirroring `lib/mediaCatalog.ts`. Narrowing to `DocTargetId` here
+ * keeps this file's exhaustiveness check scoped to the family it actually
+ * writes prose for, rather than forcing every new family through one
+ * ever-growing table.
  */
-export const TARGETS: Readonly<Record<TargetId, TargetNote>> = {
+export type DocTargetId = Extract<
+  TargetId,
+  | "pdf"
+  | "odt"
+  | "docx"
+  | "txt"
+  | "html"
+  | "rtf"
+  | "epub"
+  | "ods"
+  | "xlsx"
+  | "csv"
+  | "odp"
+  | "pptx"
+  | "png"
+  | "jpg"
+  | "tables"
+  | "layers"
+  | "pdfa"
+  | "markdown"
+>;
+
+/**
+ * Every target the document family can produce, with its prose.
+ *
+ * Exhaustive on purpose. `DocTargetId` is derived from the generated
+ * contract, so adding a document-family format to the service and
+ * regenerating the types makes this object fail to compile — which is the
+ * correct moment to decide what the new page says, and is exactly the
+ * "loudly, at compile time" the rest of this app aims for.
+ */
+export const TARGETS: Readonly<Record<DocTargetId, TargetNote>> = {
   pdf: {
     label: "PDF",
     badge: "PDF",
@@ -280,7 +325,7 @@ export const TARGETS: Readonly<Record<TargetId, TargetNote>> = {
  * source — "Word to PDF" — so repeating it in the description would be three
  * lines saying one thing. Exhaustive, like `TARGETS`, for the same reason.
  */
-const CARD_LEADS: Readonly<Record<TargetId, string>> = {
+const CARD_LEADS: Readonly<Record<DocTargetId, string>> = {
   pdf: "A fixed layout that looks the same on every device",
   docx: "Editable in Word, with the formatting intact",
   odt: "Editable in LibreOffice, Google Docs and anything open",
@@ -310,11 +355,26 @@ export const SOURCES: readonly SourceGroup[] = [
     key: "word",
     label: "Word",
     noun: "Word documents",
-    extensions: [".docx", ".doc", ".docm"],
+    extensions: [".docx"],
+    family: "writer",
+    badge: "W",
+    blurb: "The modern Word format. Read directly, with no filter to translate through.",
+  },
+  {
+    // `.doc`, `.docm`, `.dot` and `.dotx` are grouped separately from `.docx`
+    // rather than folded into it, because they genuinely behave differently:
+    // each of them can reach `docx` as an extra target (an upgrade to the
+    // modern format), which `.docx` itself obviously cannot. Folding them
+    // together would make the group's own "identical targets" test fail for
+    // the right reason — this is a real difference, not an oversight.
+    key: "doc",
+    label: "Word (legacy)",
+    noun: "older Word documents",
+    extensions: [".doc", ".docm", ".dot", ".dotx"],
     family: "writer",
     badge: "W",
     blurb:
-      "All three Word extensions — .docx, the older .doc, and macro-enabled .docm — import through the same filter, so they behave identically here. Macros are not carried into the output.",
+      "The older .doc format, macro-enabled .docm, and the .dot/.dotx template variants. Macros are not carried into the output.",
   },
   {
     key: "excel",
@@ -327,6 +387,17 @@ export const SOURCES: readonly SourceGroup[] = [
       "Modern Excel workbooks. Values, formulas and sheet structure are read directly.",
   },
   {
+    // Same reasoning as `.doc`'s group: `.xls`/`.xlsm` can reach `xlsx` as an
+    // extra target, which `.xlsx` itself cannot.
+    key: "xls",
+    label: "Excel (legacy)",
+    noun: "older Excel spreadsheets",
+    extensions: [".xls", ".xlsm"],
+    family: "calc",
+    badge: "X",
+    blurb: "The older .xls format and macro-enabled .xlsm.",
+  },
+  {
     key: "powerpoint",
     label: "PowerPoint",
     noun: "PowerPoint presentations",
@@ -334,6 +405,17 @@ export const SOURCES: readonly SourceGroup[] = [
     family: "impress",
     badge: "P",
     blurb: "PowerPoint decks, read one slide at a time.",
+  },
+  {
+    // Same reasoning again: these can reach `pptx` as an extra target.
+    key: "ppt",
+    label: "PowerPoint (legacy)",
+    noun: "older PowerPoint presentations",
+    extensions: [".ppt", ".pptm", ".pps", ".ppsx", ".pot", ".potx"],
+    family: "impress",
+    badge: "P",
+    blurb:
+      "The older .ppt format, macro-enabled .pptm, the slideshow variants .pps/.ppsx, and the template variants .pot/.potx.",
   },
   {
     key: "jpg",
@@ -417,6 +499,41 @@ export const SOURCES: readonly SourceGroup[] = [
     badge: "RTF",
     blurb: "Rich Text Format — the interchange format that predates them all and still opens.",
   },
+  {
+    // PDF as a *source* — the exception to the invariant this file used to
+    // hold ("PDF is never an input"), now that the service can extract a
+    // PDF's content back out. It is still never reachable from PDF *to*
+    // PDF, and it is still never the thing PDF pages themselves accept —
+    // this is its own, separate direction.
+    key: "pdf",
+    label: "PDF",
+    noun: "PDF files",
+    extensions: [".pdf"],
+    family: "draw",
+    badge: "PDF",
+    blurb:
+      "A PDF, read back out rather than only produced. Extraction quality depends on how the PDF was made: one exported from Word or Google Docs carries real structure across; a PDF that is a scan of a page has none to extract, and OCR is a separate tool for that case.",
+  },
+  {
+    key: "odg",
+    label: "ODG",
+    noun: "ODG drawings",
+    extensions: [".odg"],
+    family: "draw",
+    badge: "ODG",
+    blurb: "LibreOffice Draw's native vector-drawing format.",
+  },
+  {
+    // No `family`: pandoc handles these, not LibreOffice, and `GET /formats`
+    // reports `family: null` for every one of them. See `SourceGroup.family`.
+    key: "markup",
+    label: "Markdown & markup",
+    noun: "plain-text markup files",
+    extensions: [".md", ".rst", ".tex", ".textile", ".org", ".opml", ".muse", ".ipynb"],
+    badge: "MD",
+    blurb:
+      "Eight plain-text markup dialects — Markdown, reStructuredText, LaTeX, Textile, Org mode, OPML outlines, Muse and Jupyter notebooks — all read by the same engine (pandoc) and all reaching the same targets.",
+  },
 ];
 
 /**
@@ -429,7 +546,7 @@ export const SOURCES: readonly SourceGroup[] = [
  * something true of *this* pair and not of its neighbours — if two entries could
  * swap sentences without either becoming wrong, one of them is filler.
  */
-const PAIRS: ReadonlyArray<readonly [source: string, target: TargetId, angle: string]> = [
+const PAIRS: ReadonlyArray<readonly [source: string, target: DocTargetId, angle: string]> = [
   // ---------------------------------------------------------------- Word
   [
     "word",
@@ -568,6 +685,11 @@ const PAIRS: ReadonlyArray<readonly [source: string, target: TargetId, angle: st
     "pdf",
     "Turn a table into a readable document — the quickest way to share tabular data with somebody who does not want a spreadsheet, and does not want to be trusted with one.",
   ],
+  [
+    "csv",
+    "html",
+    "Publish a CSV as an HTML table you can paste into a page or an email, where it renders as a table without anyone needing a spreadsheet application.",
+  ],
 
   // ----------------------------------------------------------------- TXT
   [
@@ -631,6 +753,168 @@ const PAIRS: ReadonlyArray<readonly [source: string, target: TargetId, angle: st
     "pdf",
     "A photograph or a scan into a PDF with a fixed page size. Useful when a picture has to be a document: an ID, a receipt, a signed page.",
   ],
+
+  // ------------------------------------------------------ Word (legacy)
+  [
+    "doc",
+    "pdf",
+    "Freeze an old .doc file — or a .dot/.dotx template — as a PDF that opens identically everywhere, including on a machine with no Word installed at all.",
+  ],
+  [
+    "doc",
+    "docx",
+    "Bring an old .doc file into the modern Word format, so it opens without the compatibility warning and edits the way current Word expects.",
+  ],
+  [
+    "doc",
+    "odt",
+    "Move an old Word document into LibreOffice Writer's open, ISO-standardised format.",
+  ],
+  [
+    "doc",
+    "txt",
+    "Strip an old Word document back to its words, for pasting into a database, a script or a form field where markup only gets in the way.",
+  ],
+  [
+    "doc",
+    "html",
+    "Turn an old Word document into a web page, with headings, lists and emphasis carried across as HTML elements.",
+  ],
+  [
+    "doc",
+    "rtf",
+    "The middle ground for an old Word document: rich enough to keep basic formatting, plain enough that decades-old software can still open it.",
+  ],
+  [
+    "doc",
+    "epub",
+    "Reflow an old Word document into an e-book, ready for a Kobo, Apple Books or a phone.",
+  ],
+
+  // ----------------------------------------------------- Excel (legacy)
+  [
+    "xls",
+    "pdf",
+    "Freeze an old .xls or macro-enabled .xlsm workbook into a document nobody can re-sort or re-format.",
+  ],
+  [
+    "xls",
+    "xlsx",
+    "Move an old .xls workbook into the modern Excel format it has been overdue for.",
+  ],
+  [
+    "xls",
+    "ods",
+    "Move an old Excel workbook to the open spreadsheet format, so it opens in LibreOffice and Google Sheets without a proprietary reader.",
+  ],
+  [
+    "xls",
+    "csv",
+    "Reduce an old workbook to its raw values for import somewhere else. Formulas arrive as their results, not as formulas.",
+  ],
+  [
+    "xls",
+    "html",
+    "Publish an old workbook's sheet as an HTML table, without anyone needing Excel to read it.",
+  ],
+
+  // -------------------------------------------------- PowerPoint (legacy)
+  [
+    "ppt",
+    "pdf",
+    "Share an old deck exactly as designed, on any machine, without PowerPoint or the fonts it was built with.",
+  ],
+  [
+    "ppt",
+    "pptx",
+    "Move an old .ppt deck — or a .pps/.pot slideshow or template — into the modern PowerPoint format.",
+  ],
+  [
+    "ppt",
+    "odp",
+    "Move an old deck into the open ODP format that LibreOffice Impress edits natively.",
+  ],
+  [
+    "ppt",
+    "png",
+    "Every slide of an old deck as a lossless PNG, delivered as a ZIP with one image per slide.",
+  ],
+  [
+    "ppt",
+    "jpg",
+    "Every slide of an old deck as a JPEG — lighter than PNG, and the better choice for photographic slides.",
+  ],
+
+  // ------------------------------------------------------------ ODG
+  [
+    "odg",
+    "pdf",
+    "Export a LibreOffice Draw vector drawing to a fixed-layout PDF that opens without Draw installed.",
+  ],
+
+  // ------------------------------------------------------------ PDF
+  [
+    "pdf",
+    "docx",
+    "Pull a PDF's text back into an editable Word document. Works best on a PDF that was exported from a word processor in the first place; a scanned page has no text layer to extract, and needs OCR first.",
+  ],
+  [
+    "pdf",
+    "pptx",
+    "Turn a PDF back into an editable PowerPoint deck, one page per slide.",
+  ],
+  [
+    "pdf",
+    "xlsx",
+    "Pull a PDF's tables back into an editable Excel workbook, one table per sheet.",
+  ],
+  [
+    "pdf",
+    "markdown",
+    "Extract a PDF's structure — headings, lists, tables and emphasis — as GitHub-flavoured Markdown, with none of the fixed-layout formatting.",
+  ],
+  [
+    "pdf",
+    "png",
+    "Every page of a PDF as a lossless PNG, delivered as a ZIP with one image per page.",
+  ],
+  [
+    "pdf",
+    "jpg",
+    "Every page of a PDF as a JPEG — lighter than PNG, and the better choice when the page count is the point rather than the fine detail.",
+  ],
+  [
+    "pdf",
+    "pdfa",
+    "Convert an ordinary PDF into PDF/A, the archival variant built to still open correctly in decades.",
+  ],
+
+  // --------------------------------------------------------- Markup
+  [
+    "markup",
+    "docx",
+    "Turn a plain-text markup file into an editable Word document, with headings, lists and emphasis as real Word formatting.",
+  ],
+  [
+    "markup",
+    "html",
+    "Render a plain-text markup file as a web page you can open in any browser.",
+  ],
+  [
+    "markup",
+    "odt",
+    "Bring a plain-text markup file into LibreOffice Writer as an editable document, structure intact.",
+  ],
+  [
+    "markup",
+    "rtf",
+    "Turn a plain-text markup file into Rich Text Format, which almost any word processor opens.",
+  ],
+  [
+    "markup",
+    "txt",
+    "Strip a plain-text markup file down to its words, with every heading, list marker and emphasis symbol removed.",
+  ],
 ];
 
 /** One conversion page. */
@@ -638,7 +922,7 @@ export interface ConversionEntry {
   /** The URL: `word_to_pdf`. */
   slug: string;
   source: SourceGroup;
-  target: TargetId;
+  target: DocTargetId;
   /** Short labels, e.g. "Word" and "PDF". */
   sourceLabel: string;
   targetLabel: string;
@@ -664,7 +948,7 @@ export interface ConversionEntry {
 }
 
 /** `word_to_pdf` — derived, never written by hand. */
-export function slugFor(sourceKey: string, target: TargetId): string {
+export function slugFor(sourceKey: string, target: DocTargetId): string {
   return `${sourceKey}_to_${target}`;
 }
 
@@ -675,7 +959,7 @@ function extensionList(extensions: readonly string[]): string {
 }
 
 /** The other targets this source group can reach — the page's internal links. */
-function siblings(entry: { source: SourceGroup; target: TargetId }): TargetNote[] {
+function siblings(entry: { source: SourceGroup; target: DocTargetId }): TargetNote[] {
   return PAIRS.filter(([key, target]) => key === entry.source.key && target !== entry.target).map(
     ([, target]) => TARGETS[target],
   );
@@ -690,7 +974,7 @@ function siblings(entry: { source: SourceGroup; target: TargetId }): TargetNote[
  */
 export function composeEntry(
   source: SourceGroup,
-  target: TargetId,
+  target: DocTargetId,
   angle: string,
 ): ConversionEntry {
   const note = TARGETS[target];
@@ -775,12 +1059,12 @@ export const HOME_FAQS: readonly { question: string; answer: string }[] = [
   {
     question: "What can this converter do?",
     answer:
-      "It converts between document, spreadsheet, presentation and image formats in both directions where the formats allow it: Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG in, and PDF, DOCX, XLSX, PPTX, ODT, ODS, ODP, CSV, TXT, HTML, RTF, EPUB, PNG and JPG out. Every combination the service supports has its own page — see all conversions.",
+      "It converts between document, spreadsheet, presentation and image formats in both directions where the formats allow it: Word, Excel, PowerPoint (including their older extensions), ODT, ODS, ODP, ODG, CSV, TXT, HTML, RTF, Markdown and other plain-text markup, PNG and JPG in, and now PDF itself back in too — PDF to Word, PowerPoint, Excel or Markdown. Every combination the service supports has its own page — see all conversions.",
   },
   {
     question: "Can I convert a PDF back into Word or Excel?",
     answer:
-      "Not with this service. PDF is an output here, never an input: the converter reads office documents and images, and PDF is what it produces. Nothing on this site will accept a PDF upload, and there is no page offering it, so you will not spend an upload finding out.",
+      "Yes — PDF to Word, PDF to PowerPoint, PDF to Excel and PDF to Markdown are all here. Extraction quality depends on how the PDF was made: one exported from a word processor carries real structure back out; a PDF that is a scan of a page has no text layer to extract, and needs OCR first.",
   },
   {
     question: "Is it free? Do I need an account?",
@@ -854,8 +1138,11 @@ export function entriesByFamily(): ReadonlyArray<{
   label: string;
   entries: readonly ConversionEntry[];
 }> {
+  // `undefined` (the markup group — pandoc, not LibreOffice) has no
+  // `FAMILY_LABELS` entry and no homepage pill; it is still reachable, from
+  // `/conversions` and the sitemap, just not grouped here.
   const families = SOURCES.map((group) => group.family).filter(
-    (family, index, all) => all.indexOf(family) === index,
+    (family, index, all): family is Family => family !== undefined && all.indexOf(family) === index,
   );
 
   return families.map((family) => ({

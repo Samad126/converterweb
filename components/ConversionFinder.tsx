@@ -35,8 +35,12 @@ export function ConversionFinder(): React.ReactElement {
   const [sourceKey, setSourceKey] = useState<string | null>(null);
 
   const families = useMemo(() => {
+    // The markup group has no `family` (pandoc, not LibreOffice) and is
+    // excluded from these pills the same way `entriesByFamily` excludes it.
     const seen: Family[] = [];
-    for (const source of SOURCES) if (!seen.includes(source.family)) seen.push(source.family);
+    for (const source of SOURCES) {
+      if (source.family !== undefined && !seen.includes(source.family)) seen.push(source.family);
+    }
     return seen;
   }, []);
 
