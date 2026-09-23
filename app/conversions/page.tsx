@@ -5,24 +5,33 @@ import { ConversionFinder } from "@/components/converter/ConversionFinder";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ToolCard } from "@/components/ui/ToolCard";
 import { CATALOG, entriesByFamily } from "@/lib/content/catalog";
-import { breadcrumbList, itemList } from "@/lib/content/schema";
+import { TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
+import { breadcrumbList, itemList, pageList } from "@/lib/content/schema";
+import { AUDIO_CATALOG, MEDIA_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { AUDIO_FORMATS, VIDEO_FORMATS } from "@/lib/media/mediaFormats";
 
 /**
- * Every conversion, grouped by document family.
+ * Every conversion, grouped by type: documents by family, then audio and video.
  *
- * This is the crawl hub. The homepage grid and the footer already link all
- * sixty-seven pages, so nothing here is reachable *only* from this page — it
- * exists because a page that lists everything with a sentence of context is a
- * better landing point than a grid of tiles when what you want is to compare
- * options, and because a hub with descriptive headings around its links is a
- * stronger signal about what the linked pages are actually for.
+ * This is the crawl hub. The homepage grid and the footer already link the
+ * document pages and `/audio` and `/video` list their own, so nothing here is
+ * reachable *only* from this page — it exists because a page that lists
+ * everything with a sentence of context is a better landing point than a grid
+ * of tiles when what you want is to compare options, and because a hub with
+ * descriptive headings around its links is a stronger signal about what the
+ * linked pages are actually for.
  */
 export const metadata: Metadata = {
   title: "All conversions",
   description:
-    "Every conversion this service can perform, grouped by document type: Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files into PDF and each other.",
+    "Every conversion this service can perform: Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files into PDF and each other, plus audio (MP3, WAV, FLAC and more) and video (MP4, WEBM, MKV and more).",
   alternates: { canonical: "/conversions" },
 };
+
+const MEDIA_SECTIONS = [
+  { key: "audio", label: "Audio", formats: AUDIO_FORMATS, catalog: AUDIO_CATALOG, hub: "/audio" },
+  { key: "video", label: "Video", formats: VIDEO_FORMATS, catalog: VIDEO_CATALOG, hub: "/video" },
+] as const;
 
 export default function ConversionsPage(): React.ReactElement {
   const families = entriesByFamily();
@@ -35,6 +44,12 @@ export default function ConversionsPage(): React.ReactElement {
   return (
     <main id="content" className="shell py-10 sm:py-14">
       <JsonLd document={itemList(CATALOG)} />
+      <JsonLd
+        document={pageList(
+          "Audio and video conversions",
+          MEDIA_CATALOG.map((entry) => [entry.heading, entry.route] as const),
+        )}
+      />
       <JsonLd document={breadcrumbList(crumbs)} />
 
       <nav aria-label="Breadcrumb" className="mb-6">
@@ -52,10 +67,10 @@ export default function ConversionsPage(): React.ReactElement {
       <header>
         <h1 className="page-title">All conversions</h1>
         <p className="page-lede">
-          {CATALOG.length} conversions across four document families. Every one
-          of them runs the same way: choose a file, and the output format is
-          already selected for you. Nothing here needs an account, and nothing
-          you upload is kept.
+          {TOTAL_CONVERSIONS} conversions across documents, spreadsheets, presentations, images,
+          audio and video. Every one of them runs the same way: choose a file, and the output
+          format is already selected for you. Nothing here needs an account, and nothing you
+          upload is kept.
         </p>
       </header>
 
@@ -71,6 +86,33 @@ export default function ConversionsPage(): React.ReactElement {
               <ToolCard key={entry.slug} entry={entry} />
             ))}
           </div>
+        </section>
+      ))}
+
+      {MEDIA_SECTIONS.map((section) => (
+        <section key={section.key} className="mt-12">
+          <h2 className="section-title">{section.label}</h2>
+          <p className="page-lede mt-2">
+            {section.catalog.length} conversions across {section.formats.length} {section.key}{" "}
+            formats. <Link href={section.hub}>Open the {section.key} hub</Link> for the same list
+            on its own page.
+          </p>
+          {section.formats.map((source) => (
+            <div key={source.id} className="mt-6">
+              <h3 className="meta">From {source.label}</h3>
+              <ul className="link-chips mt-3">
+                {section.catalog
+                  .filter((entry) => entry.source.id === source.id)
+                  .map((entry) => (
+                    <li key={entry.slug}>
+                      <Link className="link-chip" href={entry.route}>
+                        {entry.heading}
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ))}
         </section>
       ))}
     </main>

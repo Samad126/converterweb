@@ -7,24 +7,25 @@
  * Not to be confused with `FormatPicker` — that one is the target-format radio
  * grid inside the running converter (`StatusPanel`), built from a live
  * `GET /formats` response. This one has no network call and nothing to run;
- * it is editorial navigation over `lib/content/catalog.ts`, the same data the family
- * sections below it render, just entered by format instead of by document
- * family. It invents no capability: every source is `SOURCES`, and every
- * target shown for a source is read from `CATALOG` — which of these two
- * things does this service *actually* pair — never a fixed table of formats
- * the way a universal-converter's mega picker usually is. Picking a source
- * simply never shows a target it cannot reach; there is nothing here for a
- * person to pick that doesn't lead to a real page.
+ * it is editorial navigation over `lib/content/conversionIndex.ts`, which
+ * joins the document catalog and the audio/video catalog into one list of
+ * source -> targets groups, the same data the sections below it render. It
+ * invents no capability: every target shown for a source is a page one of
+ * those catalogs publishes, so there is nothing here for a person to pick
+ * that doesn't lead to a real page.
  *
- * A widget, not the only path: every one of these sixty-seven pages is also
- * linked from the family sections directly below, so nothing here has to
- * work without JavaScript for the site to stay fully crawlable.
+ * Searchable by name, extension or kind: "word", ".mp3", "audio" and "video"
+ * all narrow the list, across documents and media alike.
+ *
+ * A widget, not the only path: every one of these pages is also linked from
+ * the sections directly below, so nothing here has to work without JavaScript
+ * for the site to stay fully crawlable.
  */
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { FormatBadge } from "@/components/ui/FormatBadge";
-import { CATALOG, FAMILY_LABELS, SOURCES, TARGETS, type Family, type SourceGroup } from "@/lib/content/catalog";
+import { FINDER_GROUPS, type FinderSource } from "@/lib/content/conversionIndex";
 
 function normalize(value: string): string {
   return value.toLowerCase().trim();
@@ -34,33 +35,30 @@ export function ConversionFinder(): React.ReactElement {
   const [query, setQuery] = useState("");
   const [sourceKey, setSourceKey] = useState<string | null>(null);
 
-  const families = useMemo(() => {
-    // The markup group has no `family` (pandoc, not LibreOffice) and is
-    // excluded from these pills the same way `entriesByFamily` excludes it.
-    const seen: Family[] = [];
-    for (const source of SOURCES) {
-      if (source.family !== undefined && !seen.includes(source.family)) seen.push(source.family);
-    }
-    return seen;
-  }, []);
-
-  const filteredSources = useMemo(() => {
+  const filteredGroups = useMemo(() => {
     const q = normalize(query);
-    if (q === "") return SOURCES;
-    return SOURCES.filter(
-      (source) =>
-        normalize(source.label).includes(q) ||
-        source.extensions.some((extension) => normalize(extension).includes(q)),
-    );
+    if (q === "") return FINDER_GROUPS;
+    return FINDER_GROUPS.map((group) => {
+      const groupMatches = normalize(group.label).includes(q);
+      return {
+        ...group,
+        sources: group.sources.filter(
+          (source) =>
+            groupMatches ||
+            normalize(source.label).includes(q) ||
+            source.searchTerms.some((term) => term.includes(q)),
+        ),
+      };
+    }).filter((group) => group.sources.length > 0);
   }, [query]);
 
-  const selectedSource: SourceGroup | null =
-    SOURCES.find((source) => source.key === sourceKey) ?? null;
-
-  const targets = useMemo(() => {
-    if (!selectedSource) return [];
-    return CATALOG.filter((entry) => entry.source.key === selectedSource.key);
-  }, [selectedSource]);
+  const selectedSource: FinderSource | null = useMemo(() => {
+    for (const group of FINDER_GROUPS) {
+      const found = group.sources.find((source) => source.key === sourceKey);
+      if (found) return found;
+    }
+    return null;
+  }, [sourceKey]);
 
   return (
     <div className="format-picker">
@@ -88,37 +86,33 @@ export function ConversionFinder(): React.ReactElement {
           id="format-picker-search"
           type="text"
           className="input format-picker-search"
-          placeholder="Search a format — e.g. “word” or “powerpoint”"
+          placeholder="Search a format — e.g. “word”, “mp3” or “video”"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
 
         <div className="format-picker-columns">
           <nav className="format-picker-sources" aria-label="Source formats">
-            {families.map((family) => {
-              const inFamily = filteredSources.filter((source) => source.family === family);
-              if (inFamily.length === 0) return null;
-              return (
-                <div key={family} className="format-picker-group">
-                  <span className="format-picker-group-heading">{FAMILY_LABELS[family]}</span>
-                  <ul className="format-picker-source-list">
-                    {inFamily.map((source) => (
-                      <li key={source.key}>
-                        <button
-                          type="button"
-                          className="format-picker-source-btn"
-                          data-active={source.key === sourceKey ? "true" : undefined}
-                          onClick={() => setSourceKey(source.key)}
-                        >
-                          {source.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-            {filteredSources.length === 0 ? (
+            {filteredGroups.map((group) => (
+              <div key={group.key} className="format-picker-group">
+                <span className="format-picker-group-heading">{group.label}</span>
+                <ul className="format-picker-source-list">
+                  {group.sources.map((source) => (
+                    <li key={source.key}>
+                      <button
+                        type="button"
+                        className="format-picker-source-btn"
+                        data-active={source.key === sourceKey ? "true" : undefined}
+                        onClick={() => setSourceKey(source.key)}
+                      >
+                        {source.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {filteredGroups.length === 0 ? (
               <p className="meta">Nothing matches &ldquo;{query.trim()}&rdquo;.</p>
             ) : null}
           </nav>
@@ -130,10 +124,10 @@ export function ConversionFinder(): React.ReactElement {
                   {selectedSource.label} converts to
                 </span>
                 <div className="format-picker-target-grid">
-                  {targets.map((entry) => (
-                    <Link key={entry.slug} href={`/${entry.slug}`} className="format-picker-target">
-                      <FormatBadge label={TARGETS[entry.target].badge} filled />
-                      {TARGETS[entry.target].label}
+                  {selectedSource.targets.map((target) => (
+                    <Link key={target.href} href={target.href} className="format-picker-target">
+                      <FormatBadge label={target.badge} filled />
+                      {target.label}
                     </Link>
                   ))}
                 </div>

@@ -12,7 +12,8 @@
  * `tests/content/categories.test.ts` checks every id lands in exactly one group, so a
  * new tool silently missing a category fails the suite instead of the review.
  */
-import { CATALOG, EXTRA_TOOLS, POPULAR } from "./catalog";
+import { EXTRA_TOOLS, POPULAR } from "./catalog";
+import { TOTAL_CONVERSIONS } from "./conversionIndex";
 import { PDF_TOOLS } from "../pdf/pdfTools";
 import { POPULAR_AUDIO, POPULAR_VIDEO } from "../media/mediaCatalog";
 
@@ -62,7 +63,7 @@ export const CATEGORIES: readonly Category[] = [
     label: "Convert",
     lede: "Turn one format into another — Word, Excel, PowerPoint, images and more.",
     seeAllHref: "/conversions",
-    seeAllLabel: `All ${CATALOG.length} conversions`,
+    seeAllLabel: `All ${TOTAL_CONVERSIONS} conversions`,
     items: POPULAR.map((entry) => ({
       id: entry.slug,
       label: entry.heading,
@@ -119,8 +120,8 @@ export const CATEGORIES: readonly Category[] = [
     id: "audio",
     label: "Audio",
     lede: "Convert between MP3, WAV, FLAC, M4A and other audio formats.",
-    seeAllHref: "/audio",
-    seeAllLabel: "All audio conversions",
+    seeAllHref: "/conversions",
+    seeAllLabel: `All ${TOTAL_CONVERSIONS} conversions`,
     items: POPULAR_AUDIO.map((entry) => ({
       id: entry.slug,
       label: entry.heading,
@@ -132,8 +133,8 @@ export const CATEGORIES: readonly Category[] = [
     id: "video",
     label: "Video",
     lede: "Convert between MP4, WEBM, MKV, MOV and other video formats.",
-    seeAllHref: "/video",
-    seeAllLabel: "All video conversions",
+    seeAllHref: "/conversions",
+    seeAllLabel: `All ${TOTAL_CONVERSIONS} conversions`,
     items: POPULAR_VIDEO.map((entry) => ({
       id: entry.slug,
       label: entry.heading,
