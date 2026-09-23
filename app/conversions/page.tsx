@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ConversionFinder } from "@/components/converter/ConversionFinder";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { FormatPair } from "@/components/ui/FormatBadge";
 import { ToolCard } from "@/components/ui/ToolCard";
 import { CATALOG, entriesByFamily } from "@/lib/content/catalog";
 import { TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
@@ -100,17 +101,24 @@ export default function ConversionsPage(): React.ReactElement {
           {section.formats.map((source) => (
             <div key={source.id} className="mt-6">
               <h3 className="meta">From {source.label}</h3>
-              <ul className="link-chips mt-3">
+              <div className="tool-grid mt-3">
                 {section.catalog
                   .filter((entry) => entry.source.id === source.id)
                   .map((entry) => (
-                    <li key={entry.slug}>
-                      <Link className="link-chip" href={entry.route}>
-                        {entry.heading}
-                      </Link>
-                    </li>
+                    <Link
+                      key={entry.slug}
+                      className="tool-card"
+                      href={entry.route}
+                      prefetch={false}
+                    >
+                      <FormatPair source={entry.source.label} target={entry.target.label} />
+                      <span className="tool-card-title">{entry.heading}</span>
+                      <span className="tool-card-blurb">
+                        A {entry.target.label} file, converted in the background.
+                      </span>
+                    </Link>
                   ))}
-              </ul>
+              </div>
             </div>
           ))}
         </section>
