@@ -10,8 +10,8 @@
  */
 import { useState } from "react";
 
-import { PdfToolShell } from "@/components/PdfToolShell";
-import { usePdfFileTool } from "@/lib/usePdfFileTool";
+import { PdfToolShell } from "@/components/pdf/PdfToolShell";
+import { usePdfFileTool } from "@/lib/pdf/usePdfFileTool";
 
 export function RemovePagesTool(): React.ReactElement {
   const tool = usePdfFileTool("/pdf/remove-pages");

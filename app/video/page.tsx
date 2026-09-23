@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { JsonLd } from "@/components/JsonLd";
-import { VIDEO_CATALOG } from "@/lib/mediaCatalog";
-import { VIDEO_FORMATS } from "@/lib/mediaFormats";
-import { breadcrumbList } from "@/lib/schema";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { VIDEO_FORMATS } from "@/lib/media/mediaFormats";
+import { breadcrumbList } from "@/lib/content/schema";
 
 /**
  * The crawl hub for the 182 `/video/*` pages — the media equivalent of

@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:api": "openapi-typescript openapi.json -o lib/api-types.ts"
+    "gen:api": "openapi-typescript openapi.json -o lib/api/api-types.ts"
   },
   "dependencies": {
     "fflate": "^0.8.3",

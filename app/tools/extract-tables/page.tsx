@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { ConverterShell } from "@/components/ConverterShell";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { ConverterShell } from "@/components/converter/ConverterShell";
 
 /**
  * `/tools/extract-tables` — a standalone extraction tool, not a catalog page.
@@ -13,7 +13,7 @@ import { ConverterShell } from "@/components/ConverterShell";
  * conversion, so — like `/tools/psd-to-layers` — this reuses `ConverterShell`
  * directly, locked to `tables` and narrowed to the two Word extensions that
  * reach it, rather than gaining a catalog page. See the note in
- * `lib/catalog.ts` for the full reasoning.
+ * `lib/content/catalog.ts` for the full reasoning.
  */
 export const metadata: Metadata = {
   title: "Extract tables from Word — Free Online Table Extractor",

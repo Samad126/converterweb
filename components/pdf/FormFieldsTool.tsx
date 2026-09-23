@@ -7,15 +7,15 @@
  */
 import { useState } from "react";
 
-import { DropZone } from "@/components/DropZone";
-import { ErrorNote } from "@/components/ErrorNote";
-import { HealthNote } from "@/components/HealthNote";
-import { CheckIcon, DownloadIcon } from "@/components/Icons";
+import { DropZone } from "@/components/ui/DropZone";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { HealthNote } from "@/components/converter/HealthNote";
+import { CheckIcon, DownloadIcon } from "@/components/ui/Icons";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
-import { recoveryFor } from "@/lib/errors";
+import { recoveryFor } from "@/lib/api/errors";
 import { formatBytes } from "@/lib/format";
-import { usePdfFormFieldsTool, type FormField } from "@/lib/usePdfFormFieldsTool";
-import { useServiceHealth } from "@/lib/useServiceHealth";
+import { usePdfFormFieldsTool, type FormField } from "@/lib/pdf/usePdfFormFieldsTool";
+import { useServiceHealth } from "@/lib/converter/useServiceHealth";
 
 export function FormFieldsTool(): React.ReactElement {
   const tool = usePdfFormFieldsTool();

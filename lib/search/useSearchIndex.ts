@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from "react";
 
-import { fetchFormats } from "../api";
+import { fetchFormats } from "../api/api";
 import { buildSearchIndex } from "./buildIndex";
 import type { SearchItem } from "./types";
 

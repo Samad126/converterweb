@@ -4,8 +4,8 @@
  * `/pdf/scan-to-pdf` — build a PDF from a set of images, one page per image,
  * each page sized to its own image's pixel dimensions.
  */
-import { PdfMultiToolShell } from "@/components/PdfMultiToolShell";
-import { usePdfMultiFileTool } from "@/lib/usePdfMultiFileTool";
+import { PdfMultiToolShell } from "@/components/pdf/PdfMultiToolShell";
+import { usePdfMultiFileTool } from "@/lib/pdf/usePdfMultiFileTool";
 
 export function ScanToPdfTool(): React.ReactElement {
   const tool = usePdfMultiFileTool("/pdf/scan-to-pdf", {

@@ -6,9 +6,9 @@
  */
 import { useState } from "react";
 
-import { PdfToolShell } from "@/components/PdfToolShell";
-import type { PdfPart } from "@/lib/pdfApi";
-import { usePdfFileTool } from "@/lib/usePdfFileTool";
+import { PdfToolShell } from "@/components/pdf/PdfToolShell";
+import type { PdfPart } from "@/lib/api/pdfApi";
+import { usePdfFileTool } from "@/lib/pdf/usePdfFileTool";
 
 type Position = "bottom-center" | "bottom-left" | "bottom-right";
 

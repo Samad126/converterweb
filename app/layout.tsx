@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 
-import { JsonLd } from "@/components/JsonLd";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
-import { webSite } from "@/lib/schema";
-import { SITE_NAME, absoluteUrl } from "@/lib/site";
+import { GlobalErrorReporter } from "@/components/layout/GlobalErrorReporter";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { OfflineNotice } from "@/components/layout/OfflineNotice";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { webSite } from "@/lib/content/schema";
+import { SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 import "./globals.css";
 
@@ -23,11 +25,11 @@ import "./globals.css";
  * privacy sentence on the page and in the footer.
  *
  * `title.template` is what appends the site name, so a page sets only its own
- * half — see `lib/catalog.ts`, where every page title stops before the "|".
+ * half — see `lib/content/catalog.ts`, where every page title stops before the "|".
  */
 export const metadata: Metadata = {
   // Absolute URLs for anything the metadata below leaves relative. The origin
-  // itself lives in `lib/site.ts`, not here.
+  // itself lives in `lib/content/site.ts`, not here.
   metadataBase: new URL(absoluteUrl("/")),
   title: {
     default: `${SITE_NAME} — convert documents, spreadsheets, presentations and images`,
@@ -84,9 +86,11 @@ export default function RootLayout({
           Skip to the converter
         </a>
 
+        <GlobalErrorReporter />
         <JsonLd document={webSite()} />
 
         <SiteHeader />
+        <OfflineNotice />
         {children}
         <SiteFooter />
       </body>

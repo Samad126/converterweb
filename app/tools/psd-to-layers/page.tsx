@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { ConverterShell } from "@/components/ConverterShell";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { ConverterShell } from "@/components/converter/ConverterShell";
 
 /**
  * `/tools/psd-to-layers` — a standalone extraction tool, not a catalog page.
@@ -10,7 +10,7 @@ import { ConverterShell } from "@/components/ConverterShell";
  * `.psd` reports `family: null` at `GET /formats`: LibreOffice cannot open it,
  * so this service reads it with its own code and the only target it can ever
  * reach is `layers`. That is a one-off extraction, not a member of the
- * `{source}_to_{target}` conversion matrix `lib/catalog.ts` builds pages for —
+ * `{source}_to_{target}` conversion matrix `lib/content/catalog.ts` builds pages for —
  * see the note there — so this reuses `ConverterShell` directly, locked to
  * `layers` and narrowed to `.psd`, rather than gaining a 37th catalog page.
  *

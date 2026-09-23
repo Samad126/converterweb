@@ -30,7 +30,7 @@ coverage
 
 # The OpenAPI document is the input to `npm run gen:api`, which is run by hand
 # and committed. Nothing imports it at build time or at runtime - the generated
-# `lib/api-types.ts` is what the code reads - so it does not need to be here.
+# `lib/api/api-types.ts` is what the code reads - so it does not need to be here.
 openapi.json
 
 # Deployment scaffolding: mounted at runtime or used by the host, never baked in.

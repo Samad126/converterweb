@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { CategorySection } from "@/components/CategorySection";
-import { Faq } from "@/components/Faq";
-import { JsonLd } from "@/components/JsonLd";
-import { ToolSearch } from "@/components/ToolSearch";
-import { CATALOG, HOME_FAQS } from "@/lib/catalog";
-import { CATEGORIES } from "@/lib/categories";
-import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/mediaCatalog";
-import { PDF_TOOLS } from "@/lib/pdfTools";
-import { faqPage, itemList } from "@/lib/schema";
-import { SITE_NAME, absoluteUrl } from "@/lib/site";
+import { CategorySection } from "@/components/ui/CategorySection";
+import { Faq } from "@/components/ui/Faq";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { ToolSearch } from "@/components/search/ToolSearch";
+import { CATALOG, HOME_FAQS } from "@/lib/content/catalog";
+import { CATEGORIES } from "@/lib/content/categories";
+import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { PDF_TOOLS } from "@/lib/pdf/pdfTools";
+import { faqPage, itemList } from "@/lib/content/schema";
+import { SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 /**
  * The homepage: every tool in one place.
  *
  * A server component, and deliberately a thin one. All of the content below is
- * static JSX built from `lib/catalog.ts`, so the whole page — heading, prose,
+ * static JSX built from `lib/content/catalog.ts`, so the whole page — heading, prose,
  * and all sixty-seven links — is in the HTML that leaves the server. There is no
  * client component anywhere on this page, which means there is nothing to
  * hydrate and nothing that can fail to render for a crawler.
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 /**
  * How many `/pdf/*` tools actually have a page.
  *
- * `lib/pdfTools.ts` names tools that are planned as well as ones that ship, and
+ * `lib/pdf/pdfTools.ts` names tools that are planned as well as ones that ship, and
  * gates a link on `route` — so counting the array would claim tools that do not
  * exist yet. The hero repeats this number, so it has to be the honest one.
  */

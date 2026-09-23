@@ -8,7 +8,7 @@
  *
  * Pulled from the live service (converterapi.alakbaroff.com/formats).
  */
-import type { FormatsResponse } from "@/lib/contract";
+import type { FormatsResponse } from "@/lib/api/contract";
 
 export const MATRIX: FormatsResponse = {
   "targets": [

@@ -11,7 +11,7 @@ import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { server } from "./tests/msw/server";
-import { captureNativeXhr } from "./tests/transport/nativeXhr";
+import { captureNativeXhr } from "./tests/api/transport/nativeXhr";
 
 /**
  * A stand-in App Router, for the one thing every page-level test needs it
@@ -19,7 +19,7 @@ import { captureNativeXhr } from "./tests/transport/nativeXhr";
  * and `useSearchParams`. Outside an actual Next app tree those throw, and a
  * real router isn't the point of a test that's asserting on links or SEO
  * metadata. `ToolSearch`'s own navigation and URL-sync behaviour is exercised
- * directly, at the `useToolSearchController` level, in `tests/search-ui.test.tsx`
+ * directly, at the `useToolSearchController` level, in `tests/search/search-ui.test.tsx`
  * — this stub only has to not crash.
  */
 vi.mock("next/navigation", () => ({
@@ -28,7 +28,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Before `server.listen()` below, while the global still points at jsdom's own
-// implementation. See `tests/transport/nativeXhr.ts`.
+// implementation. See `tests/api/transport/nativeXhr.ts`.
 captureNativeXhr(globalThis.XMLHttpRequest);
 
 // Object URLs. jsdom has no `createObjectURL` at all, and the app revokes them

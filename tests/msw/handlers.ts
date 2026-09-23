@@ -11,7 +11,7 @@
  */
 import { HttpResponse, http } from "msw";
 
-import type { ErrorCode } from "@/lib/contract";
+import type { ErrorCode } from "@/lib/api/contract";
 
 import { MATRIX } from "./matrix";
 

@@ -4,14 +4,14 @@
  * `/pdf/compare` — exactly two PDFs in, a page-by-page text diff back. No
  * download: the result is rendered directly, never a PDF blob.
  */
-import { DropZone } from "@/components/DropZone";
-import { ErrorNote } from "@/components/ErrorNote";
-import { HealthNote } from "@/components/HealthNote";
+import { DropZone } from "@/components/ui/DropZone";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { HealthNote } from "@/components/converter/HealthNote";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
-import { recoveryFor } from "@/lib/errors";
+import { recoveryFor } from "@/lib/api/errors";
 import { formatBytes } from "@/lib/format";
-import { usePdfCompareTool, type CompareDiffChunk } from "@/lib/usePdfCompareTool";
-import { useServiceHealth } from "@/lib/useServiceHealth";
+import { usePdfCompareTool, type CompareDiffChunk } from "@/lib/pdf/usePdfCompareTool";
+import { useServiceHealth } from "@/lib/converter/useServiceHealth";
 
 export function CompareTool(): React.ReactElement {
   const tool = usePdfCompareTool();
@@ -111,7 +111,7 @@ export function CompareTool(): React.ReactElement {
 function CompareResultView({
   result,
 }: {
-  result: import("@/lib/usePdfCompareTool").CompareResult;
+  result: import("@/lib/pdf/usePdfCompareTool").CompareResult;
 }): React.ReactElement {
   return (
     <section className="flex flex-col gap-4">

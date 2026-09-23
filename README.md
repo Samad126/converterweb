@@ -46,7 +46,7 @@ npm start            # serve the build
 npm run test         # vitest, 274 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
-npm run gen:api      # regenerate lib/api-types.ts from openapi.json
+npm run gen:api      # regenerate lib/api/api-types.ts from openapi.json
 ```
 
 Requires Node 20 or newer. There are no fonts, scripts or stylesheets fetched
@@ -55,7 +55,7 @@ same on a machine that has never been online.
 
 ## Where the API base URL comes from
 
-`NEXT_PUBLIC_CONVERTER_BASE_URL`, read once in `lib/api.ts`, **defaulting to
+`NEXT_PUBLIC_CONVERTER_BASE_URL`, read once in `lib/api/api.ts`, **defaulting to
 same-origin**. That default is the intended deployment: one reverse proxy in
 front of both the page and the API, so there is no CORS and no preflight.
 
@@ -141,20 +141,20 @@ value, so a deploy that skips it goes on serving the bundle it was built with.
 
 ## The API types cannot drift from the spec
 
-`openapi.json` is the contract, and `lib/api-types.ts` is generated from it by
+`openapi.json` is the contract, and `lib/api/api-types.ts` is generated from it by
 `openapi-typescript`:
 
 ```bash
 npm run gen:api
 ```
 
-The output is committed and never edited by hand — `lib/contract.ts` is the only
+The output is committed and never edited by hand — `lib/api/contract.ts` is the only
 file that reaches into its shape, so a regeneration that renames something
 breaks at compile time in one place rather than in twenty call sites.
 
 ## Where the conversion pages come from
 
-`lib/catalog.ts` is the editorial layer: it decides **which pages exist and what
+`lib/content/catalog.ts` is the editorial layer: it decides **which pages exist and what
 they say**. It does not decide **what can be converted** — that is still answered
 on every page, at runtime, by `GET /formats`, through `findSource` / `isReachable`
 / `unreachableReason` exactly as before.
@@ -162,49 +162,49 @@ on every page, at runtime, by `GET /formats`, through `findSource` / `isReachabl
 The split exists because a page that has to rank in a search engine has to carry
 its prose and its internal links in the server-rendered HTML, which rules out
 asking the service what it supports. So there is a curated table, and the rule
-that used to forbid one — see `lib/formats.ts` and `tests/matrix.test.tsx` — had
+that used to forbid one — see `lib/converter/formats.ts` and `tests/content/matrix.test.tsx` — had
 to be reconciled with it rather than quietly broken:
 
 | Concern | Source of truth |
 | --- | --- |
-| Which pages exist, and what they say | `lib/catalog.ts` |
+| Which pages exist, and what they say | `lib/content/catalog.ts` |
 | Whether a conversion is possible at all | `GET /formats`, at runtime |
 | Which targets a chosen file can reach | `isReachable`, at runtime |
 
 Three things keep the catalog honest, and none of them is a promise:
 
 1. **Types.** Each entry's `target` is a `TargetId` generated from `openapi.json`
-   into `lib/contract.ts`, so naming a target the contract does not define is a
+   into `lib/api/contract.ts`, so naming a target the contract does not define is a
    compile error.
 2. **A page cannot lie, even when it is wrong.** A conversion page locks its
    format and narrows its input, and neither can make it claim a conversion the
    service does not have: `canConvert` requires the live matrix to confirm the
    target is reachable, so a stale page shows the server's own reason and a
-   button that refuses to run. See `components/ConverterShell.tsx`.
-3. **A test.** `tests/catalog.test.tsx` checks every extension and every pair
+   button that refuses to run. See `components/converter/ConverterShell.tsx`.
+3. **A test.** `tests/content/catalog.test.tsx` checks every extension and every pair
    against the matrix fixture, in both directions — so a page for a conversion
    the service cannot perform fails, and so does a conversion the service supports
    with no page.
 
-`tests/matrix.test.tsx` still bans extension literals everywhere in `app/`,
-`components/` and `lib/` **except `lib/catalog.ts`**, which is named and justified
+`tests/content/matrix.test.tsx` still bans extension literals everywhere in `app/`,
+`components/` and `lib/` **except `lib/content/catalog.ts`**, which is named and justified
 inline there. The ban is a proxy for the rule above; the catalog test checks the
 rule directly, which is why the exemption is not a hole. If you are adding a page
 that needs to name a format, put it in the catalog rather than widening that
 exemption.
 
-`lib/catalog.ts` also exports `EXTRA_TOOLS` — the two standalone extraction
+`lib/content/catalog.ts` also exports `EXTRA_TOOLS` — the two standalone extraction
 tools at `/tools/extract-tables` and `/tools/psd-to-layers`, which take a
 source format (Word, PSD) the rest of the site never converts as a whole file
 and reach exactly one target each, so they don't fit `{source}_to_{target}`.
-Audio and video are the same idea at a different scale: `lib/mediaFormats.ts`
-and `lib/mediaCatalog.ts` mirror `lib/catalog.ts`'s shape (source formats,
+Audio and video are the same idea at a different scale: `lib/media/mediaFormats.ts`
+and `lib/media/mediaCatalog.ts` mirror `lib/content/catalog.ts`'s shape (source formats,
 target notes, a generated catalog of pairs) but for the async media pipeline,
 under `/audio` and `/video` rather than the root. PDF-only tools — operations
-on a PDF that are not a conversion at all — live in `lib/pdfTools.ts` and are
-grouped for the homepage and `/pdf` by `lib/categories.ts`, which also
+on a PDF that are not a conversion at all — live in `lib/pdf/pdfTools.ts` and are
+grouped for the homepage and `/pdf` by `lib/content/categories.ts`, which also
 partitions every `PDF_TOOLS` entry into a category and is checked exhaustive by
-`tests/categories.test.ts`.
+`tests/content/categories.test.ts`.
 
 ### A page is about one conversion
 
@@ -228,7 +228,7 @@ Three details worth knowing:
   than by a picker that would silently turn this page into a different one.
 - **The narrow `accept` also filters the file dialog**, so the rejection path is
   only reachable by drag-and-drop, which bypasses `accept` by design. That is why
-  `tests/locked.test.tsx` drops the wrong file rather than choosing it —
+  `tests/converter/locked.test.tsx` drops the wrong file rather than choosing it —
   `userEvent.upload` honours `accept`, so choosing one could not reproduce the
   case at all.
 - **A 415 offers a different file, not a different format.** On a page with one
@@ -238,8 +238,8 @@ Three details worth knowing:
 Leaving both props off gives back the universal tool, which is how the converter
 tests still drive the four states end to end — but note that **no page uses it
 any more**. If you are looking for somewhere to delete, that unlocked branch and
-`components/FormatPicker.tsx` are the candidates; they are kept because
-`tests/matrix.test.tsx` treats the picker as the guard on the "no hard-coded
+`components/converter/FormatPicker.tsx` are the candidates; they are kept because
+`tests/content/matrix.test.tsx` treats the picker as the guard on the "no hard-coded
 matrix" rule, and because a "convert anything" page would need them back.
 
 ### Slugs
@@ -272,14 +272,14 @@ guessed-at binary `favicon.ico` to silence it.
 
 Source groups fold together extensions the service already treats identically —
 `.docx`, `.doc` and `.docm` are all `word`, because they share a Writer import
-filter and reach the same targets. `tests/catalog.test.tsx` asserts that
+filter and reach the same targets. `tests/content/catalog.test.tsx` asserts that
 grouping is lossless; if the service ever gave two extensions in a group
 different targets, the test would fail rather than a page quietly overpromising.
 
 Two consequences worth knowing:
 
 - **Grouping means the page count is smaller than the raw extension count.**
-  `lib/catalog.ts` currently has 67 entries in `CATALOG`, from 18 source groups
+  `lib/content/catalog.ts` currently has 67 entries in `CATALOG`, from 18 source groups
   (`SOURCES.length`) — fewer pages than one per raw extension because, as above,
   extensions that share an import filter and reach the same targets share a page.
 - **PDF used to never be an input; it now is, for a fixed set of targets.** An
@@ -288,7 +288,7 @@ Two consequences worth knowing:
   there. The service now extracts a PDF's own content back out — `pdf_to_docx`,
   `pdf_to_pptx`, `pdf_to_xlsx`, `pdf_to_markdown`, `pdf_to_png`, `pdf_to_jpg` and
   `pdf_to_pdfa` all exist — through a separate export engine, noted in
-  `lib/catalog.ts`. What is still true: PDF never converts to itself, and a
+  `lib/content/catalog.ts`. What is still true: PDF never converts to itself, and a
   PDF's own pages (`word_to_pdf` and so on) still only ever *produce* PDF, never
   accept one.
 
@@ -296,26 +296,26 @@ Two consequences worth knowing:
 
 | Rule | Where it lives |
 | --- | --- |
-| `POST /convert/{target}`; no bare `/convert` | `lib/api.ts` |
-| A `200` must carry the target's own media type, charset ignored | `lib/formats.ts` (`expectedMediaType`), checked in `lib/useConverter.ts` |
-| A non-2xx carries the JSON envelope; `error.message` shown verbatim | `lib/errors.ts` (`readErrorMessage`, `failureFromResponse`) |
-| A body that is missing or not JSON falls back to `HTTP <status>` | `lib/errors.ts` (`fallbackMessage`) |
-| `error.code` is never displayed | `ErrorNote` is never given it; asserted in `tests/failures.test.tsx` |
-| The matrix comes from `GET /formats` at runtime | `lib/formats.ts`, and the whole of `tests/matrix.test.tsx` |
-| Which conversion pages exist is editorial; what converts is not | `lib/catalog.ts` (pages), `GET /formats` (capability) |
-| A page locks its format and narrows its input; it never offers a picker | `components/ConverterShell.tsx`, `app/[conversion]/page.tsx` |
-| A page cannot claim a conversion the live matrix does not confirm | `canConvert` in `lib/useConverter.ts`, `tests/locked.test.tsx` |
-| The grid is server-rendered links; the filter is CSS `:has()` only | `components/ToolGrid.tsx`, `app/globals.css` |
-| Internal navigation is `next/link`; the catalog's bulk links opt out of prefetch | `components/ToolCard.tsx`, `components/SiteFooter.tsx` |
-| Every conversion page has one `<h1>` and its own canonical | `app/[conversion]/page.tsx`, `tests/seo.test.tsx` |
-| Structured data only describes what the page visibly shows | `lib/schema.ts`, compared in `tests/seo.test.tsx` |
-| PDF is an output, never an input — no page says otherwise | asserted in `tests/catalog.test.tsx` |
-| Image targets are archives, decided by `multiple` | `lib/constants.ts`, `lib/formats.ts` (`downloadExtension`) |
-| Both RFC 6266 filename forms, `filename*` preferred | `lib/contentDisposition.ts` |
-| Exactly one `file` part, as `application/octet-stream` | `lib/api.ts`, asserted byte-for-byte in `tests/transport.test.ts` |
-| 104857600 bytes (100 MiB), checked before the request | `lib/constants.ts` (`MAX_UPLOAD_BYTES`), `lib/useConverter.ts` (`selectFile`) |
+| `POST /convert/{target}`; no bare `/convert` | `lib/api/api.ts` |
+| A `200` must carry the target's own media type, charset ignored | `lib/converter/formats.ts` (`expectedMediaType`), checked in `lib/converter/useConverter.ts` |
+| A non-2xx carries the JSON envelope; `error.message` shown verbatim | `lib/api/errors.ts` (`readErrorMessage`, `failureFromResponse`) |
+| A body that is missing or not JSON falls back to `HTTP <status>` | `lib/api/errors.ts` (`fallbackMessage`) |
+| `error.code` is never displayed | `ErrorNote` is never given it; asserted in `tests/converter/failures.test.tsx` |
+| The matrix comes from `GET /formats` at runtime | `lib/converter/formats.ts`, and the whole of `tests/content/matrix.test.tsx` |
+| Which conversion pages exist is editorial; what converts is not | `lib/content/catalog.ts` (pages), `GET /formats` (capability) |
+| A page locks its format and narrows its input; it never offers a picker | `components/converter/ConverterShell.tsx`, `app/[conversion]/page.tsx` |
+| A page cannot claim a conversion the live matrix does not confirm | `canConvert` in `lib/converter/useConverter.ts`, `tests/converter/locked.test.tsx` |
+| The grid is server-rendered links; the filter is CSS `:has()` only | `components/ui/ToolGrid.tsx`, `app/globals.css` |
+| Internal navigation is `next/link`; the catalog's bulk links opt out of prefetch | `components/ui/ToolCard.tsx`, `components/layout/SiteFooter.tsx` |
+| Every conversion page has one `<h1>` and its own canonical | `app/[conversion]/page.tsx`, `tests/content/seo.test.tsx` |
+| Structured data only describes what the page visibly shows | `lib/content/schema.ts`, compared in `tests/content/seo.test.tsx` |
+| PDF is an output, never an input — no page says otherwise | asserted in `tests/content/catalog.test.tsx` |
+| Image targets are archives, decided by `multiple` | `lib/constants.ts`, `lib/converter/formats.ts` (`downloadExtension`) |
+| Both RFC 6266 filename forms, `filename*` preferred | `lib/api/contentDisposition.ts` |
+| Exactly one `file` part, as `application/octet-stream` | `lib/api/api.ts`, asserted byte-for-byte in `tests/api/transport.test.ts` |
+| 104857600 bytes (100 MiB), checked before the request | `lib/constants.ts` (`MAX_UPLOAD_BYTES`), `lib/converter/useConverter.ts` (`selectFile`) |
 | The client gives up at 120 s, after the server's 90 s | `lib/constants.ts` (`CLIENT_ABORT_MS`) |
-| `X-Request-Id` shown under an error with a copy button | `components/ErrorNote.tsx` |
+| `X-Request-Id` shown under an error with a copy button | `components/ui/ErrorNote.tsx` |
 | Unauthenticated; no keys, tokens or login | nowhere, deliberately |
 
 ## Decisions where the contract left room
@@ -398,7 +398,7 @@ The whole Tailwind colour namespace is still cleared in `app/globals.css`
 and every colour has to resolve through the tokens in `:root`. What changed is
 what's allowed to be *in* those tokens.
 
-`tests/palette.test.ts` replaced `tests/achromatic.test.ts` for exactly that
+`tests/content/palette.test.ts` replaced `tests/achromatic.test.ts` for exactly that
 reason: the old test failed on any hue at all, and that rule is no longer true.
 The new one compiles the stylesheet through the real Tailwind pipeline and
 fails if any colour it finds is outside an explicit, named palette — enforcing
@@ -420,7 +420,7 @@ a grid of tool cards. That reference marks each tool with a coloured app icon �
 a red W for Word, a green X for Excel — which is precisely the affordance this
 design has no colours to spend on.
 
-The replacement is inversion. `components/FormatBadge.tsx` draws a monogram tile
+The replacement is inversion. `components/ui/FormatBadge.tsx` draws a monogram tile
 per format and pairs them: **outline for the source, solid black for the target**,
 joined by an arrow. `W → PDF` says which way the conversion goes in a way that a
 grid of thirty-six cards otherwise makes genuinely hard to see, and it reuses the
@@ -472,42 +472,41 @@ Two other decisions on that page are worth knowing:
 ## Tests
 
 ```
-tests/contentDisposition.test.ts    the two RFC 6266 forms, decoding, sanitising
-tests/transport.test.ts             the real multipart bytes, abort, the 120 s deadline
-tests/transport/                    fixtures for the above (a real server on an ephemeral port)
-tests/conversion.test.tsx           the happy paths, media-type mismatch, archives, preview
-tests/failures.test.tsx             every status, the envelope, error.code never in the DOM
-tests/matrix.test.tsx               the picker follows /formats; no hard-coded matrix
-tests/service.test.tsx              health, the phases, cancel, timeout, loading
-tests/progress.test.tsx             the two phases of the meter
-tests/errors.test.ts                the envelope, our sentences, status → recovery
-tests/format.test.ts                bytes, durations, extensions
-tests/preview.test.ts               escaping and the preview document
-tests/achromatic.test.ts            the black-and-white rule, compiled
-tests/catalog.test.tsx              the catalog against the matrix, both directions
-tests/locked.test.tsx               a page locks its format, narrows its input, and cannot lie
-tests/seo.test.tsx                  one h1, metadata, JSON-LD, and every link in the HTML
-tests/bulk-conversion.test.tsx      multi-file /convert requests, per-file errors.json
-tests/categories.test.ts            every PDF_TOOLS id lands in exactly one homepage category
-tests/extraction-tools.test.tsx     the two /tools pages (extract-tables, psd-to-layers)
-tests/palette.test.ts               the achromatic token set stays achromatic under theming
-tests/pdfCoords.test.ts             page-space ↔ screen-space coordinate math for PDF editing
-tests/pdf-form-fields-compare.test.tsx  form-field detection and PDF diffing
-tests/pdf-multi-tools.test.tsx      merge, split, organize and the other multi-file PDF tools
-tests/pdf-sign-redact-edit.test.tsx sign, redact and edit tool behaviour
-tests/pdf-tools-pages.test.tsx      the /pdf/* pages themselves — one per tool
-tests/pdf-tools.test.tsx            the shared PDF-tool plumbing (lib/pdfTools.ts and friends)
-tests/search.test.ts                the search index built from every catalog
-tests/search-ui.test.tsx            the search box's own behaviour
-tests/zip.test.ts                   building/reading the archive responses client-side
+tests/api/contentDisposition.test.ts        the two RFC 6266 forms, decoding, sanitising
+tests/api/errors.test.ts                    the envelope, our sentences, status → recovery
+tests/api/transport.test.ts                 the real multipart bytes, abort, the 120 s deadline
+tests/api/transport/                        fixtures for the above (a real server on an ephemeral port)
+tests/content/catalog.test.tsx              the catalog against the matrix, both directions
+tests/content/categories.test.ts            every PDF_TOOLS id lands in exactly one homepage category
+tests/content/matrix.test.tsx               the picker follows /formats; no hard-coded matrix
+tests/content/palette.test.ts               the achromatic token set stays achromatic under theming
+tests/content/seo.test.tsx                  one h1, metadata, JSON-LD, and every link in the HTML
+tests/converter/bulk-conversion.test.tsx    multi-file /convert requests, per-file errors.json
+tests/converter/conversion.test.tsx         the happy paths, media-type mismatch, archives, preview
+tests/converter/extraction-tools.test.tsx   the two /tools pages (extract-tables, psd-to-layers)
+tests/converter/failures.test.tsx           every status, the envelope, error.code never in the DOM
+tests/converter/format.test.ts              bytes, durations, extensions
+tests/converter/locked.test.tsx             a page locks its format, narrows its input, and cannot lie
+tests/converter/preview.test.ts             escaping and the preview document
+tests/converter/progress.test.tsx           the two phases of the meter
+tests/converter/service.test.tsx            health, the phases, cancel, timeout, loading
+tests/converter/zip.test.ts                 building/reading the archive responses client-side
+tests/pdf/pdf-form-fields-compare.test.tsx  form-field detection and PDF diffing
+tests/pdf/pdf-multi-tools.test.tsx          merge, split, organize and the other multi-file PDF tools
+tests/pdf/pdf-sign-redact-edit.test.tsx     sign, redact and edit tool behaviour
+tests/pdf/pdf-tools-pages.test.tsx          the /pdf/* pages themselves — one per tool
+tests/pdf/pdf-tools.test.tsx                the shared PDF-tool plumbing (lib/pdf/pdfTools.ts and friends)
+tests/pdf/pdfCoords.test.ts                 page-space ↔ screen-space coordinate math for PDF editing
+tests/search/search-ui.test.tsx             the search box's own behaviour
+tests/search/search.test.ts                 the search index built from every catalog
 ```
 
 Two things are tested outside MSW, and both for the same reason — MSW's XHR
 interceptor is missing a piece the contract depends on:
 
 - **Cancellation.** Its `XMLHttpRequest` implements no `abort()` at all, so a
-  cancelled request never reports itself as cancelled. `tests/transport.test.ts`
-  and the cancel tests in `tests/service.test.tsx` therefore run jsdom's own XHR
+  cancelled request never reports itself as cancelled. `tests/api/transport.test.ts`
+  and the cancel tests in `tests/converter/service.test.tsx` therefore run jsdom's own XHR
   against a real server on an ephemeral port, captured before MSW replaces the
   global.
 - **The multipart body.** Asking a handler for `request.formData()` describes
@@ -516,7 +515,7 @@ interceptor is missing a piece the contract depends on:
 
 jsdom has no upload progress events either — its `XMLHttpRequest` never fires
 `upload.onprogress` or `upload.onload` for a request that is merely in flight —
-so the determinate half of the meter is covered by `tests/progress.test.tsx` at
+so the determinate half of the meter is covered by `tests/converter/progress.test.tsx` at
 the component level, and the phase transition in context by a server that sends
 its response headers and then stalls.
 

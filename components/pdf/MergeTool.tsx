@@ -8,8 +8,8 @@
  * `usePdfMultiFileTool` and `PdfMultiToolShell` instead of the single-file
  * pair every other `/pdf/*` tool uses.
  */
-import { PdfMultiToolShell } from "@/components/PdfMultiToolShell";
-import { usePdfMultiFileTool } from "@/lib/usePdfMultiFileTool";
+import { PdfMultiToolShell } from "@/components/pdf/PdfMultiToolShell";
+import { usePdfMultiFileTool } from "@/lib/pdf/usePdfMultiFileTool";
 
 export function MergeTool(): React.ReactElement {
   const tool = usePdfMultiFileTool("/pdf/merge", { fieldName: "files", minFiles: 2 });

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { FormFieldsTool } from "@/components/pdf/FormFieldsTool";
 
 export const metadata: Metadata = {

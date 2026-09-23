@@ -13,7 +13,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 
-import { ConverterShell } from "@/components/ConverterShell";
+import { ConverterShell } from "@/components/converter/ConverterShell";
 
 /** Render the converter and wait until the matrix has loaded and the form is live. */
 export async function setupPage(): Promise<UserEvent> {

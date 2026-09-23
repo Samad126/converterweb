@@ -2,23 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { ConverterShell } from "@/components/ConverterShell";
-import { Faq } from "@/components/Faq";
-import { JsonLd } from "@/components/JsonLd";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { ConverterShell } from "@/components/converter/ConverterShell";
+import { Faq } from "@/components/ui/Faq";
+import { JsonLd } from "@/components/seo/JsonLd";
 import {
   type ConversionEntry,
   SLUGS,
   findEntry,
   otherSourcesFor,
   otherTargetsFor,
-} from "@/lib/catalog";
+} from "@/lib/content/catalog";
 import {
   breadcrumbList,
   conversionApplication,
   faqPage,
   howTo,
-} from "@/lib/schema";
+} from "@/lib/content/schema";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { formatBytes } from "@/lib/format";
 

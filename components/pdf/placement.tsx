@@ -5,7 +5,7 @@
  * `SignTool`, `RedactTool` and `EditTool` render inside `PdfPagePreview`.
  * Everything here works in canvas-pixel space (`canvasSizePx` from
  * `PdfPagePreview`) — converting to/from PDF points is the caller's job, via
- * `lib/pdfCoords.ts`.
+ * `lib/pdf/pdfCoords.ts`.
  *
  * The overlay's rendered box can be narrower than `canvasSizePx` — the
  * preview scales down to fit its column on a narrow screen — so every raw
@@ -17,8 +17,8 @@
  */
 import { useCallback, useRef, useState } from "react";
 
-import type { Size } from "@/lib/pdfCoords";
-import { rectFromCorners, type Point, type Rect } from "@/lib/pdfCoords";
+import type { Size } from "@/lib/pdf/pdfCoords";
+import { rectFromCorners, type Point, type Rect } from "@/lib/pdf/pdfCoords";
 
 /** How many canvas-pixel units one *displayed* pixel of `box` covers. */
 function displayScale(box: { width: number; height: number }, canvasSizePx: Size): { sx: number; sy: number } {

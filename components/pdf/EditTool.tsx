@@ -14,8 +14,8 @@
  */
 import { useCallback, useRef, useState } from "react";
 
-import { PdfPagePreview } from "@/components/PdfPagePreview";
-import { PdfToolShell } from "@/components/PdfToolShell";
+import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
+import { PdfToolShell } from "@/components/pdf/PdfToolShell";
 import { PlacedBox, rectStylePercent, useNewRectDrag } from "@/components/pdf/placement";
 import {
   pagePointToPixelPoint,
@@ -25,9 +25,9 @@ import {
   type Point,
   type Rect,
   type Size,
-} from "@/lib/pdfCoords";
-import { usePdfFileTool } from "@/lib/usePdfFileTool";
-import type { PdfPart } from "@/lib/pdfApi";
+} from "@/lib/pdf/pdfCoords";
+import { usePdfFileTool } from "@/lib/pdf/usePdfFileTool";
+import type { PdfPart } from "@/lib/api/pdfApi";
 
 type EditElementType = "text" | "image" | "rectangle" | "ellipse" | "line" | "freehand";
 

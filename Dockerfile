@@ -6,7 +6,7 @@
 #
 # `NEXT_PUBLIC_*` variables are INLINED AT BUILD TIME.
 #
-# `lib/api.ts` reads `process.env.NEXT_PUBLIC_CONVERTER_BASE_URL`, and the
+# `lib/api/api.ts` reads `process.env.NEXT_PUBLIC_CONVERTER_BASE_URL`, and the
 # bundler replaces that expression with a string literal. So the URL the browser
 # gets is the one that was in the environment when `next build` ran - not when
 # the container started. It is therefore a BUILD ARG, and changing it means

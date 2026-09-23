@@ -4,7 +4,7 @@
  *
  * This is not a second copy of the conversion matrix — it never claims a file
  * type exists or that a conversion is possible, both of which still come from
- * `GET /formats` and `lib/catalog.ts` alone. It only widens *matching*: typing
+ * `GET /formats` and `lib/content/catalog.ts` alone. It only widens *matching*: typing
  * "excel" should find the same items typing "xlsx" does.
  */
 export const SYNONYMS: Readonly<Record<string, readonly string[]>> = {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { CategorySection } from "@/components/CategorySection";
-import { CATEGORIES } from "@/lib/categories";
+import { CategorySection } from "@/components/ui/CategorySection";
+import { CATEGORIES } from "@/lib/content/categories";
 
 export const metadata: Metadata = {
   title: "PDF Tools — Free Online PDF Editor",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The non-conversion, PDF-only categories from `lib/categories.ts` —
+ * The non-conversion, PDF-only categories from `lib/content/categories.ts` —
  * everything on this page works directly on a PDF, no format conversion
  * involved. `extract` is excluded too: its two tools take a PSD or a Word
  * document, not a PDF, so they get their own hub at `/tools` instead.

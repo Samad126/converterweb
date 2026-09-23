@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { ConversionFinder } from "@/components/ConversionFinder";
-import { JsonLd } from "@/components/JsonLd";
-import { ToolCard } from "@/components/ToolCard";
-import { CATALOG, entriesByFamily } from "@/lib/catalog";
-import { breadcrumbList, itemList } from "@/lib/schema";
+import { ConversionFinder } from "@/components/converter/ConversionFinder";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { ToolCard } from "@/components/ui/ToolCard";
+import { CATALOG, entriesByFamily } from "@/lib/content/catalog";
+import { breadcrumbList, itemList } from "@/lib/content/schema";
 
 /**
  * Every conversion, grouped by document family.

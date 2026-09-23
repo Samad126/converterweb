@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { WatermarkTool } from "@/components/pdf/WatermarkTool";
 
 export const metadata: Metadata = {

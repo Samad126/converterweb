@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/site";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 export const metadata: Metadata = {
   title: "About",

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { absoluteUrl } from "@/lib/site";
+import { absoluteUrl } from "@/lib/content/site";
 
 /**
  * The robots file.

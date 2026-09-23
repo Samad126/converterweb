@@ -3,7 +3,7 @@
 /**
  * The query/keyboard/selection state machine, with no dependency on routing.
  *
- * Split out from `components/ToolSearch.tsx` so it can be unit-tested (and
+ * Split out from `components/search/ToolSearch.tsx` so it can be unit-tested (and
  * reused by Phase 2's eventual placement) without a Next.js router in scope —
  * `next/navigation` throws outside an actual app tree, and the interaction
  * logic here has nothing to do with *how* a selection is applied. Where a

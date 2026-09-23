@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { POPULAR } from "@/lib/catalog";
+import { POPULAR } from "@/lib/content/catalog";
 
 /**
  * The 404.

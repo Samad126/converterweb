@@ -9,9 +9,9 @@
  */
 import { useState } from "react";
 
-import { PdfToolShell } from "@/components/PdfToolShell";
+import { PdfToolShell } from "@/components/pdf/PdfToolShell";
 import { formatBytes } from "@/lib/format";
-import { usePdfFileTool } from "@/lib/usePdfFileTool";
+import { usePdfFileTool } from "@/lib/pdf/usePdfFileTool";
 
 type Level = "low" | "medium" | "high";
 

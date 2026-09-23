@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Faq } from "@/components/Faq";
-import { JsonLd } from "@/components/JsonLd";
-import { MediaConvertTool } from "@/components/MediaConvertTool";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { Faq } from "@/components/ui/Faq";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { MediaConvertTool } from "@/components/media/MediaConvertTool";
 import {
   VIDEO_SLUGS,
   type MediaConversionEntry,
   findMediaEntry,
   otherSourcesFor,
   otherTargetsFor,
-} from "@/lib/mediaCatalog";
-import { breadcrumbList, faqPage } from "@/lib/schema";
+} from "@/lib/media/mediaCatalog";
+import { breadcrumbList, faqPage } from "@/lib/content/schema";
 
 /**
  * One page per video pair: `/video/mp4_to_webm`, and 181 others. See
- * `lib/mediaCatalog.ts` for why the copy is templated rather than hand-written
+ * `lib/media/mediaCatalog.ts` for why the copy is templated rather than hand-written
  * the way `app/[conversion]/page.tsx`'s 36 document pages are.
  */
 export const dynamicParams = false;

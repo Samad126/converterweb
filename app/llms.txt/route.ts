@@ -1,5 +1,5 @@
-import { CATALOG, EXTRA_TOOLS } from "@/lib/catalog";
-import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/site";
+import { CATALOG, EXTRA_TOOLS } from "@/lib/content/catalog";
+import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 /**
  * `llms.txt` — a plain-text index for AI assistants and answer engines,
@@ -10,7 +10,7 @@ import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/site";
  *
  * Generated from the same `CATALOG` the sitemap and the pages themselves are
  * built from, so this can never list a conversion the site does not actually
- * have, or drift from `lib/catalog.ts` as pages are added.
+ * have, or drift from `lib/content/catalog.ts` as pages are added.
  */
 export function GET(): Response {
   const conversionLines = CATALOG.map(

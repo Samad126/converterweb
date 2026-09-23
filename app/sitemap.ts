@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 
-import { SLUGS } from "@/lib/catalog";
-import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/mediaCatalog";
-import { absoluteUrl } from "@/lib/site";
+import { SLUGS } from "@/lib/content/catalog";
+import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { absoluteUrl } from "@/lib/content/site";
 
 /**
  * The sitemap.

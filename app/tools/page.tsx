@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { CategorySection } from "@/components/CategorySection";
-import { CATEGORIES } from "@/lib/categories";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { CategorySection } from "@/components/ui/CategorySection";
+import { CATEGORIES } from "@/lib/content/categories";
 
 export const metadata: Metadata = {
   title: "Extra tools",
@@ -18,15 +18,15 @@ export const metadata: Metadata = {
  * Both take a source format the rest of the site never touches as a whole-file
  * conversion — a Photoshop file, or a Word document read for its tables
  * rather than converted whole — and reach exactly one target each. See the
- * note at the top of `lib/catalog.ts`
+ * note at the top of `lib/content/catalog.ts`
  * for why that makes them a poor fit for the 36-page conversion matrix. This
- * page is `lib/categories.ts`'s `extract` category, given a permanent home
+ * page is `lib/content/categories.ts`'s `extract` category, given a permanent home
  * instead of pointing at `/pdf`, which neither tool's input format has
  * anything to do with.
  */
 export default function ExtraToolsPage(): React.ReactElement {
   const category = CATEGORIES.find((c) => c.id === "extract");
-  if (!category) throw new Error("tools: lib/categories.ts has no 'extract' category");
+  if (!category) throw new Error("tools: lib/content/categories.ts has no 'extract' category");
 
   return (
     <main id="content">

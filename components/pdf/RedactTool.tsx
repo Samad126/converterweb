@@ -8,15 +8,15 @@
  * Areas are drawn directly on a rendered page preview (`PdfPagePreview`):
  * drag across empty space to add one, drag its body to move it, drag its
  * corner handle to resize it. The drag happens in screen-pixel space and is
- * converted to PDF points via `lib/pdfCoords.ts`.
+ * converted to PDF points via `lib/pdf/pdfCoords.ts`.
  */
 import { useState } from "react";
 
-import { PdfPagePreview } from "@/components/PdfPagePreview";
-import { PdfToolShell } from "@/components/PdfToolShell";
+import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
+import { PdfToolShell } from "@/components/pdf/PdfToolShell";
 import { PlacedBox, rectStylePercent, useNewRectDrag } from "@/components/pdf/placement";
-import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdfCoords";
-import { usePdfFileTool } from "@/lib/usePdfFileTool";
+import { pixelRectToPointRect, pointRectToPixelRect, type Rect, type Size } from "@/lib/pdf/pdfCoords";
+import { usePdfFileTool } from "@/lib/pdf/usePdfFileTool";
 
 interface RedactArea {
   page: number;
