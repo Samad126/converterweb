@@ -26,12 +26,14 @@ export const CLIENT_ABORT_MS = 120_000;
 /**
  * How long the button stays disabled after a `429`.
  *
- * A constant of ours, not a promise from the server: the response says "try
- * again in a moment" and does not say how long a moment is. Thirty seconds is
- * long enough to be polite to a rate limiter and short enough that a person
- * does not think the page has died.
+ * The server allows 30 requests per minute per IP in a fixed 60 s window
+ * (`RATE_LIMIT_MAX`/`RATE_LIMIT_WINDOW_MS`) and answers a `429` with the
+ * seconds left in `Retry-After`, which `cooldownMsFor` prefers. This is only
+ * the fallback for a response without it (a proxy's own `429`): the window
+ * may have started at any point, so only the whole window is guaranteed to
+ * clear it.
  */
-export const RATE_LIMIT_COOLDOWN_MS = 30_000;
+export const RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 /**
  * How long "Try again" stays disabled after a `503`: the conversion queue was

@@ -116,7 +116,7 @@ export function startMediaJob(
         return;
       }
 
-      reject(new ConversionFailed(failureFromResponse(status, xhr.responseText ?? "", requestId)));
+      reject(new ConversionFailed(failureFromResponse(status, xhr.responseText ?? "", requestId, xhr.getResponseHeader("Retry-After"))));
     };
 
     xhr.open("POST", apiUrl(`/media/${encodeURIComponent(target)}`), true);
@@ -162,7 +162,7 @@ export async function fetchMediaJobStatus(id: string, signal?: AbortSignal): Pro
   const text = await response.text();
 
   if (!response.ok) {
-    return { status: "failed", failure: failureFromResponse(response.status, text, requestId) };
+    return { status: "failed", failure: failureFromResponse(response.status, text, requestId, response.headers.get("Retry-After")) };
   }
 
   try {
@@ -221,7 +221,7 @@ export async function downloadMediaJob(downloadUrl: string, signal?: AbortSignal
   const requestId = response.headers.get("X-Request-Id");
   if (!response.ok) {
     const text = await response.text();
-    throw new ConversionFailed(failureFromResponse(response.status, text, requestId));
+    throw new ConversionFailed(failureFromResponse(response.status, text, requestId, response.headers.get("Retry-After")));
   }
 
   return {

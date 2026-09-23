@@ -332,12 +332,13 @@ what the contract says arrives. The UI says *"A ZIP archive containing one image
 per page"* on the chip, beside the format, and again on the result — a `.png`
 that is really a ZIP is a surprise worth spending a sentence on.
 
-**The 429 cooldown.** The response says "try again in a moment" and does not say
-how long a moment is, so the 30 second cooldown is ours — a constant in
-`lib/constants.ts`, with the countdown visible on the disabled button. It is not
-a claim about the rate limiter; it is how long this client declines to ask
-again. Nothing else retries on its own: a retry is always a button somebody
-pressed.
+**The 429 cooldown.** The backend allows 30 requests per minute per IP in a
+fixed 60 second window and answers a `429` with `Retry-After` (seconds left in
+the window, exposed through CORS), which the countdown on the disabled button
+uses. Without that header (a proxy's own `429`) the client falls back to a
+constant in `lib/constants.ts`: the full 60 second window, since anything
+shorter can hit a second `429`. Nothing else retries on its own: a retry is
+always a button somebody pressed.
 
 **Which failures bring the form back.** A failed conversion leaves the file and
 the format valid, and the only useful action is another attempt — so the page

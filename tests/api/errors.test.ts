@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cooldownMsFor,
   OUR_MESSAGES,
   cancelledFailure,
   failureFromResponse,
@@ -157,5 +158,16 @@ describe("choosing the way out", () => {
     expect(showsFormatPicker(failureFromResponse(415, "", null))).toBe(true);
     expect(showsFormatPicker(failureFromResponse(500, "", null))).toBe(false);
     expect(showsFormatPicker(networkFailure())).toBe(false);
+  });
+});
+
+describe("Retry-After on a 429", () => {
+  it("drives the cooldown when the server sent one", () => {
+    expect(cooldownMsFor(failureFromResponse(429, "", null, "12"))).toBe(12_000);
+  });
+
+  it("falls back to the full window when it is missing or unusable", () => {
+    expect(cooldownMsFor(failureFromResponse(429, "", null))).toBe(60_000);
+    expect(cooldownMsFor(failureFromResponse(429, "", null, "soon"))).toBe(60_000);
   });
 });

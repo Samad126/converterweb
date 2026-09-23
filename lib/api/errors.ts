@@ -47,6 +47,8 @@ export interface Failure {
    * of any component's props.
    */
   code: string | null;
+  /** The server's `Retry-After`, in milliseconds, when it sent a usable one. */
+  retryAfterMs?: number | null;
 }
 
 /** Our sentences, for the cases where there is no server sentence to show. */
@@ -102,10 +104,13 @@ export function failureFromResponse(
   status: number,
   body: string,
   requestId: string | null,
+  retryAfter: string | null = null,
 ): Failure {
   const envelope = readErrorMessage(body);
+  const seconds = retryAfter === null ? NaN : Number(retryAfter);
 
   return {
+    retryAfterMs: Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) * 1000 : null,
     kind: "http",
     status,
     message: envelope?.message ?? fallbackMessage(status),
@@ -228,12 +233,12 @@ export function recoveryFor(failure: Failure): Recovery {
 
 /**
  * How long "Try again" should stay disabled for this failure, in milliseconds;
- * 0 when there is nothing to wait for. Ours, not the server's: neither response
- * says how long "a moment" is.
+ * 0 when there is nothing to wait for. A 429 uses the server's `Retry-After` when
+ * it sent one, and our own full-window fallback otherwise.
  */
 export function cooldownMsFor(failure: Failure): number {
   if (failure.kind !== "http") return 0;
-  if (failure.status === 429) return RATE_LIMIT_COOLDOWN_MS;
+  if (failure.status === 429) return failure.retryAfterMs ?? RATE_LIMIT_COOLDOWN_MS;
   if (failure.status === 503) return BUSY_COOLDOWN_MS;
   return 0;
 }

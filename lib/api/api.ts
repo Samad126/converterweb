@@ -93,7 +93,7 @@ async function requestJson(path: string, signal?: AbortSignal): Promise<unknown>
   const body = await response.text();
 
   if (!response.ok) {
-    throw new ConversionFailed(failureFromResponse(response.status, body, requestId));
+    throw new ConversionFailed(failureFromResponse(response.status, body, requestId, response.headers.get("Retry-After")));
   }
 
   try {
@@ -337,7 +337,7 @@ export function convert(
       }
 
       void bodyText(xhr.response).then((body) => {
-        reject(new ConversionFailed(failureFromResponse(status, body, requestId)));
+        reject(new ConversionFailed(failureFromResponse(status, body, requestId, xhr.getResponseHeader("Retry-After"))));
       });
     };
 

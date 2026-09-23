@@ -237,7 +237,7 @@ describe("each status chooses its own way out", () => {
     // The cooldown is ours, not a promise from the server, and it is visible.
     const button = within(alert).getByRole("button", { name: /Try again in \d+ s/ });
     expect(button).toBeDisabled();
-    expect(RATE_LIMIT_COOLDOWN_MS).toBe(30_000);
+    expect(RATE_LIMIT_COOLDOWN_MS).toBe(60_000);
 
     // Nothing retries on its own; it just becomes available again.
     offset = RATE_LIMIT_COOLDOWN_MS + 1_000;

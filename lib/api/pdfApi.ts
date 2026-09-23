@@ -158,7 +158,7 @@ export function postPdfTool(
         : Promise.resolve(xhr.responseText ?? "");
 
       void bodyText.then((body) => {
-        reject(new ConversionFailed(failureFromResponse(status, body, requestId)));
+        reject(new ConversionFailed(failureFromResponse(status, body, requestId, xhr.getResponseHeader("Retry-After"))));
       });
     };
 
