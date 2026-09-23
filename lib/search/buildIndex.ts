@@ -28,6 +28,7 @@
  */
 import { CATALOG, EXTRA_TOOLS } from "../content/catalog";
 import type { FormatsResponse } from "../api/contract";
+import { FILE_CATALOG } from "../files/fileCatalog";
 import { findTarget, normalizeMediaType } from "../converter/formats";
 import { MEDIA_CATALOG } from "../media/mediaCatalog";
 import { PDF_TOOLS } from "../pdf/pdfTools";
@@ -58,6 +59,22 @@ export function buildSearchIndex(formats: FormatsResponse): SearchItem[] {
       mimeTypes: mime ? [mime] : [],
       synonyms: synonymsFor([entry.source.key, entry.target]),
       targetId: entry.target,
+    });
+  }
+
+  // The `/files/*` pairs: archives, images, data, subtitles, e-books, fonts, 3D
+  // and email. Like the media pairs they are read from a static table, not
+  // `GET /formats`.
+  for (const entry of FILE_CATALOG) {
+    items.push({
+      id: `file:${entry.slug}`,
+      kind: "conversion",
+      label: entry.heading,
+      route: entry.route,
+      extensions: lower(entry.extensions),
+      mimeTypes: [],
+      synonyms: synonymsFor([entry.targetId]),
+      targetId: entry.targetId,
     });
   }
 
