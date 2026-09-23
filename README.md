@@ -12,13 +12,14 @@ own family of dedicated, single-purpose pages:
 | --- | --- |
 | `/` | The landing page: what the service does, task categories, and links into every family below |
 | `/{source}_to_{target}` | One page per document/spreadsheet/presentation/image conversion — 67 of them, e.g. `/word_to_pdf`, `/pdf_to_docx` |
+| `/files/{source}_to_{target}` | The 602 remaining pairs the other catalogs don't cover — archives, images, data files, subtitles, e-books, fonts, 3D models, email and more document pairs, e.g. `/files/3mf_to_glb` (from `lib/files/fileCatalog.ts`) |
 | `/conversions` | The full document-conversion index, grouped by family |
 | `/audio`, `/audio/{source}_to_{target}` | The audio hub and its 210 conversion pages, e.g. `/audio/mp3_to_wav` |
-| `/video`, `/video/{source}_to_{target}` | The video hub and its 182 conversion pages, e.g. `/video/mp4_to_webm` |
+| `/video`, `/video/{source}_to_{target}` | The video hub and its 156 conversion pages, e.g. `/video/mp4_to_webm` |
 | `/pdf`, `/pdf/{tool}` | The PDF-tools hub and its 20 tool pages (merge, split, OCR, sign, redact, compare, and more) — these act on a PDF, they do not convert a format |
 | `/tools`, `/tools/{tool}` | The two extraction tools that fit neither matrix: `extract-tables` (Word) and `psd-to-layers` (PSD) |
 | `/about` | Who built it and how the two repositories (this client, and the conversion service) fit together |
-| `/llms.txt` | A plain-text index of every page, generated from the same catalogs, for AI assistants and answer engines |
+| `/llms.txt` | A plain-text index for AI assistants and answer engines: the document conversions, the extra tools and the hub pages (it does not list the individual audio, video or `/files` pages) |
 
 Every conversion page carries the converter itself, showing only that
 conversion: the format is fixed, the file input accepts only the extensions that
@@ -43,7 +44,7 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run build        # production build
 npm start            # serve the build
-npm run test         # vitest, 274 tests
+npm run test         # vitest, 290 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
 npm run gen:api      # regenerate lib/api/api-types.ts from openapi.json

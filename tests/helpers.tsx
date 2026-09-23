@@ -95,7 +95,7 @@ export async function chooseFileOfSize(
 /** Pick a format by the label the server gave it — "PDF", "TXT", "PNG". */
 export async function chooseFormat(user: UserEvent, label: string): Promise<void> {
   const radio = screen.getByRole("radio", {
-    name: new RegExp(`^${label}\\b`),
+    name: new RegExp(`^${label}(?![\\w/]| \\()`),
   });
   await user.click(radio);
 }
@@ -103,7 +103,7 @@ export async function chooseFormat(user: UserEvent, label: string): Promise<void
 /** The chip element for a format, for asserting on its state. */
 export function formatChip(label: string): HTMLElement {
   const radio = screen.getByRole("radio", {
-    name: new RegExp(`^${label}\\b`),
+    name: new RegExp(`^${label}(?![\\w/]| \\()`),
   });
   const label_ = radio.closest("label");
   if (label_ === null) throw new Error(`The ${label} chip is not a label.`);
@@ -112,7 +112,7 @@ export function formatChip(label: string): HTMLElement {
 
 export function formatRadio(label: string): HTMLInputElement {
   return screen.getByRole("radio", {
-    name: new RegExp(`^${label}\\b`),
+    name: new RegExp(`^${label}(?![\\w/]| \\()`),
   }) as HTMLInputElement;
 }
 

@@ -29,6 +29,7 @@ import {
   type DocTargetId,
 } from "@/lib/content/catalog";
 import type { FormatsResponse, TargetId } from "@/lib/api/contract";
+import { FILE_CATALOG } from "@/lib/files/fileCatalog";
 
 import { MATRIX } from "../msw/matrix";
 
@@ -128,19 +129,23 @@ describe("the catalog against the matrix", () => {
     // also reach `tables`, `.doc` cannot, and that is a real difference between
     // them — but it is irrelevant to the catalog's grouping, since `tables` is a
     // standalone tool (`app/tools/extract-tables`) and never a catalog target.
+    //
+    // Only the targets the group's own pages promise are compared. The service
+    // gives some spellings extra targets (`.md` reaches `markdown`, `.jpeg`
+    // reaches `jpg-image`) that live on `/files` pages, not on the group's.
     for (const group of SOURCES) {
-      const targetSets = group.extensions.map((extension) => {
-        const source = sourceByExtension.get(extension);
-        return [...(source?.targets ?? [])]
-          .filter((target) => !STANDALONE_EXTRACTION_TARGETS.has(target))
-          .sort()
-          .join(",");
-      });
-      const distinct = new Set(targetSets);
-      expect(
-        distinct.size,
-        `${group.key} groups extensions with different targets: ${[...distinct].join(" vs ")}`,
-      ).toBe(1);
+      const promised = [...targetIds].filter((target) =>
+        SLUGS.includes(slugFor(group.key, target as DocTargetId)),
+      );
+      for (const extension of group.extensions) {
+        const reachable = new Set(sourceByExtension.get(extension)?.targets ?? []);
+        for (const target of promised) {
+          expect(
+            reachable.has(target as TargetId),
+            `${group.key} promises ${target} but ${extension} cannot reach it`,
+          ).toBe(true);
+        }
+      }
     }
   });
 
@@ -168,10 +173,18 @@ describe("the catalog against the matrix", () => {
     // see `app/tools/extract-tables` and `app/tools/psd-to-layers`. Excluding
     // them here is what keeps this test honest about that product decision
     // instead of silently demanding pages for them.
+    //
+    // Pairs the document catalog has no page for belong to `/files` instead
+    // (`lib/files/fileCatalog.ts`); they must have a page *there*, so a pair is
+    // never dropped, only homed.
+    const filePairs = new Set(
+      FILE_CATALOG.flatMap((entry) => entry.extensions.map((extension) => `${extension}>${entry.targetId}`)),
+    );
     const expected = SOURCES.flatMap((group) => {
       const first = sourceByExtension.get(group.extensions[0] ?? "");
       return (first?.targets ?? [])
         .filter((target) => !STANDALONE_EXTRACTION_TARGETS.has(target))
+        .filter((target) => !filePairs.has(`${group.extensions[0]}>${target}`))
         // Every group this file iterates is one `lib/content/catalog.ts` owns prose
         // for, so its targets are always a `DocTargetId` in practice — the
         // fixture's own type is the wider, all-families `TargetId`.

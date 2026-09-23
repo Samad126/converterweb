@@ -218,7 +218,7 @@ describe("each status chooses its own way out", () => {
     await user.click(within(alert).getByRole("button", { name: "Choose another format" }));
 
     expect(await screen.findByText("Quarterly report.docx")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /^PDF\b/ })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: /^PDF(?![\w/])/ })).toBeEnabled();
   });
 
   it("429 disables the action for a visible cooldown, then releases it", async () => {
@@ -340,12 +340,12 @@ describe("client-side refusals", () => {
     await setupPage();
     // Dropped, not picked: `accept` filters the dialog, and a drop goes
     // straight past it, so this is the check that actually protects the path.
-    dropFile("archive.zip");
+    dropFile("archive.xyz");
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("archive.zip is a .zip file, which this converter does not accept.");
+    expect(alert).toHaveTextContent("archive.xyz is a .xyz file, which this converter does not accept.");
     // The list is read out of `GET /formats`, so it cannot go stale.
-    expect(alert).toHaveTextContent(/Accepted: \.docx, \.docm, \.doc, \.odt, \.ods/);
+    expect(alert).toHaveTextContent(/Accepted: \.docx, \.docm, \.doc, \.dot/);
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(attempts).toBe(0);
   });

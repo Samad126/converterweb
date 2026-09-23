@@ -273,7 +273,26 @@ describe("no hard-coded matrix", () => {
     // equivalent — see the note there) are fixed by the service's own
     // `/pdf/scan-to-pdf` contract, not by the matrix this test guards.
     "components/pdf/ScanToPdfTool.tsx",
+    // `/files` is the same editorial layer as the catalog, for the pairs the
+    // document catalog does not own: a static snapshot of the backend matrix
+    // (`gen-file-matrix.mjs`) and the crawler-facing prose built from it.
+    // `tests/content/file-catalog.test.ts` checks it against that snapshot.
+    "lib/files/fileCatalog.ts",
+    "lib/files/fileMatrix.ts",
+    // Names the `.pdf`/`.zip` a tool or a bulk result *produces*, not a source
+    // the converter accepts.
+    "lib/constants.ts",
+    "lib/converter/bulkResult.ts",
+    // The search index labels every page, `.pdf` tools included.
+    "lib/search/buildIndex.ts",
   ]);
+
+  /**
+   * The PDF toolkit (`/pdf/*`) acts on PDFs and has no `GET /formats`
+   * equivalent — see `lib/api/pdfApi.ts` — so `.pdf` there is the tool's own
+   * contract, not a matrix source.
+   */
+  const EDITORIAL_DIRECTORIES = ["components/pdf/", "lib/pdf/"];
 
   function sourceFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -286,17 +305,26 @@ describe("no hard-coded matrix", () => {
   it("names no accepted file extension anywhere outside the generated types", () => {
     const files = APP_DIRECTORIES.flatMap(sourceFiles).filter((file) => {
       const relativePath = relative(process.cwd(), file);
-      return relativePath !== GENERATED && !EDITORIAL.has(relativePath);
+      return (
+        relativePath !== GENERATED &&
+        !EDITORIAL.has(relativePath) &&
+        !EDITORIAL_DIRECTORIES.some((directory) => relativePath.startsWith(directory))
+      );
     });
     expect(files.length).toBeGreaterThan(10);
 
     for (const file of files) {
-      const source = readFileSync(file, "utf8");
+      // Comments may name a format in prose; only code can hard-code one.
+      const source = readFileSync(file, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/(^|[^:])\/\/.*$/gm, "$1");
       for (const extension of ACCEPTED_EXTENSIONS) {
         // The escape keeps `.doc` from matching inside `.docx`, which would
-        // make the failure message point at the wrong extension.
+        // make the failure message point at the wrong extension. The lookbehind
+        // skips property access and calls (`result.zipFilename`, `res.json()`),
+        // which look like an extension but are code, not a named format.
         expect(
-          new RegExp(`\\${extension}(?![a-z0-9])`).test(source),
+          new RegExp(`(?<![\\w)\\]])\\${extension}(?![a-zA-Z0-9])`).test(source),
           `${relative(process.cwd(), file)} names ${extension}`,
         ).toBe(false);
       }

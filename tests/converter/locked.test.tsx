@@ -144,7 +144,7 @@ describe("the universal tool, which locks nothing", () => {
     await chooseFile(user, "photo.png");
     expect(screen.getByRole("button", { name: "Convert" })).toBeDisabled();
 
-    await user.click(screen.getByRole("radio", { name: /^PDF\b/ }));
+    await user.click(screen.getByRole("radio", { name: /^PDF(?![\w/])/ }));
     expect(screen.getByRole("button", { name: "Convert to PDF" })).toBeEnabled();
   });
 });

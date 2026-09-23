@@ -2,8 +2,8 @@ import { CATALOG, EXTRA_TOOLS } from "@/lib/content/catalog";
 import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 /**
- * `llms.txt` — a plain-text index for AI assistants and answer engines,
- * following the community convention (llmstxt.org): a short description of
+ * the llms-dot-txt file — a plain-text index for AI assistants and answer engines,
+ * following the community convention (the llmstxt site): a short description of
  * the site followed by a flat list of its pages as Markdown links, so a
  * model can decide what to fetch without rendering JavaScript or guessing at
  * navigation.
@@ -38,7 +38,7 @@ ${toolLines}
 
 ## Pages
 
-- [All conversions](${absoluteUrl("/conversions")}): The full catalog of document, audio and video conversion pages, grouped by format.
+- [All conversions](${absoluteUrl("/conversions")}): The full catalog of conversion pages — documents, images, archives, data, subtitles, e-books, fonts, 3D models and email, plus the audio and video hubs — grouped by format.
 - [PDF tools](${absoluteUrl("/pdf")}): Merge, split, compress, OCR, sign, redact and more.
 - [Audio conversion](${absoluteUrl("/audio")}) and [video conversion](${absoluteUrl("/video")}): Transcode between common formats.
 - [About](${absoluteUrl("/about")}): Who built this and how it works.

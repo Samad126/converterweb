@@ -41,7 +41,7 @@ describe("/tools/psd-to-layers", () => {
     const user = userEvent.setup();
     await chooseFile(user, "design.psd");
 
-    const button = screen.getByRole("button", { name: "Convert to Layers" });
+    const button = screen.getByRole("button", { name: "Convert to PNG (layers)" });
     expect(button).toBeEnabled();
     await user.click(button);
 
@@ -87,7 +87,7 @@ describe("/tools/extract-tables", () => {
     const user = userEvent.setup();
     await chooseFile(user, "report.docx");
 
-    const button = screen.getByRole("button", { name: "Convert to Tables" });
+    const button = screen.getByRole("button", { name: "Convert to XLSX (tables)" });
     expect(button).toBeEnabled();
     await user.click(button);
 
