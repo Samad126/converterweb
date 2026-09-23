@@ -2346,6 +2346,10 @@
     text-decoration-thickness: 2px;
   }
 
+  .conv-group-body {
+    padding-bottom: 24px;
+  }
+
   .faq-answer {
     padding-bottom: 24px;
     max-width: 68ch;

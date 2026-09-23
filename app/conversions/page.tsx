@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import { ConversionFinder } from "@/components/converter/ConversionFinder";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { FormatPair } from "@/components/ui/FormatBadge";
+import { ConversionGroup } from "@/components/ui/ConversionGroup";
+import { PairCard } from "@/components/ui/PairCard";
 import { ToolCard } from "@/components/ui/ToolCard";
 import { CATALOG, entriesByFamily } from "@/lib/content/catalog";
 import { TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
@@ -80,21 +81,20 @@ export default function ConversionsPage(): React.ReactElement {
         <ConversionFinder />
       </div>
 
+      <div className="faq mt-12">
       {families.map((group) => (
-        <section key={group.key} className="mt-12">
-          <h2 className="section-title">{group.label}</h2>
-          <div className="tool-grid mt-5">
+        <ConversionGroup key={group.key} label={group.label} count={group.entries.length}>
+          <div className="tool-grid">
             {group.entries.map((entry) => (
               <ToolCard key={entry.slug} entry={entry} />
             ))}
           </div>
-        </section>
+        </ConversionGroup>
       ))}
 
       {MEDIA_SECTIONS.map((section) => (
-        <section key={section.key} className="mt-12">
-          <h2 className="section-title">{section.label}</h2>
-          <p className="page-lede mt-2">
+        <ConversionGroup key={section.key} label={section.label} count={section.catalog.length}>
+          <p className="body-text">
             {section.catalog.length} conversions across {section.formats.length} {section.key}{" "}
             formats. <Link href={section.hub}>Open the {section.key} hub</Link> for the same list
             on its own page.
@@ -118,15 +118,14 @@ export default function ConversionsPage(): React.ReactElement {
               </div>
             </div>
           ))}
-        </section>
+        </ConversionGroup>
       ))}
       {FILE_CATEGORIES.map(({ key, label }) => {
         const entries = FILE_CATALOG.filter((entry) => entry.category === key);
         const sources = [...new Set(entries.map((entry) => entry.sourceLabel))];
         if (sources.length === 0) return null;
         return (
-          <section key={key} className="mt-12">
-            <h2 className="section-title">{label}</h2>
+          <ConversionGroup key={key} label={label} count={entries.length}>
             {sources.map((sourceLabel) => (
               <div key={sourceLabel} className="mt-6">
                 <h3 className="meta">From {sourceLabel}</h3>
@@ -146,31 +145,10 @@ export default function ConversionsPage(): React.ReactElement {
                 </div>
               </div>
             ))}
-          </section>
+          </ConversionGroup>
         );
       })}
+      </div>
     </main>
-  );
-}
-
-function PairCard({
-  href,
-  source,
-  target,
-  heading,
-  blurb,
-}: {
-  href: string;
-  source: string;
-  target: string;
-  heading: string;
-  blurb: string;
-}): React.ReactElement {
-  return (
-    <Link className="tool-card" href={href} prefetch={false}>
-      <FormatPair source={source} target={target} />
-      <span className="tool-card-title">{heading}</span>
-      <span className="tool-card-blurb">{blurb}</span>
-    </Link>
   );
 }
