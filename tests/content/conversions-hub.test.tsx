@@ -10,6 +10,7 @@ import ConversionsPage from "@/app/conversions/page";
 import { ConversionFinder } from "@/components/converter/ConversionFinder";
 import { CATALOG } from "@/lib/content/catalog";
 import { FINDER_GROUPS, TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
+import { FILE_CATALOG } from "@/lib/files/fileCatalog";
 import { AUDIO_CATALOG, MEDIA_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
 
 function hrefs(container: HTMLElement): Set<string> {
@@ -25,11 +26,20 @@ describe("/conversions page", () => {
 
     for (const entry of CATALOG) expect(links.has(`/${entry.slug}`), entry.slug).toBe(true);
     for (const entry of MEDIA_CATALOG) expect(links.has(entry.route), entry.route).toBe(true);
+    for (const entry of FILE_CATALOG) expect(links.has(entry.route), entry.route).toBe(true);
+  });
+
+  it("offers .rar as a source, with its own group and pages", () => {
+    const rar = FINDER_GROUPS.flatMap((group) => group.sources).find((source) => source.label === "RAR");
+    expect(rar?.targets.length).toBeGreaterThan(0);
+    expect(FILE_CATALOG.some((entry) => entry.slug === "rar_to_zip")).toBe(true);
   });
 
   it("counts every conversion in its lede", () => {
     const { container } = render(ConversionsPage());
-    expect(TOTAL_CONVERSIONS).toBe(CATALOG.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length);
+    expect(TOTAL_CONVERSIONS).toBe(
+      CATALOG.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + FILE_CATALOG.length,
+    );
     expect(container.querySelector(".page-lede")?.textContent).toContain(String(TOTAL_CONVERSIONS));
   });
 });

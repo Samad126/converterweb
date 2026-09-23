@@ -8,6 +8,7 @@ import { ToolCard } from "@/components/ui/ToolCard";
 import { CATALOG, entriesByFamily } from "@/lib/content/catalog";
 import { TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
 import { breadcrumbList, itemList, pageList } from "@/lib/content/schema";
+import { FILE_CATALOG, FILE_CATEGORIES } from "@/lib/files/fileCatalog";
 import { AUDIO_CATALOG, MEDIA_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
 import { AUDIO_FORMATS, VIDEO_FORMATS } from "@/lib/media/mediaFormats";
 
@@ -25,7 +26,7 @@ import { AUDIO_FORMATS, VIDEO_FORMATS } from "@/lib/media/mediaFormats";
 export const metadata: Metadata = {
   title: "All conversions",
   description:
-    "Every conversion this service can perform: Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files into PDF and each other, plus audio (MP3, WAV, FLAC and more) and video (MP4, WEBM, MKV and more).",
+    "Every conversion this service can perform: Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files into PDF and each other, plus archives (ZIP, RAR, 7Z and more), images, data files, subtitles, e-books, fonts, 3D models, audio (MP3, WAV, FLAC and more) and video (MP4, WEBM, MKV and more).",
   alternates: { canonical: "/conversions" },
 };
 
@@ -69,7 +70,7 @@ export default function ConversionsPage(): React.ReactElement {
         <h1 className="page-title">All conversions</h1>
         <p className="page-lede">
           {TOTAL_CONVERSIONS} conversions across documents, spreadsheets, presentations, images,
-          audio and video. Every one of them runs the same way: choose a file, and the output
+          archives, data files, subtitles, e-books, fonts, 3D models, email, audio and video. Every one of them runs the same way: choose a file, and the output
           format is already selected for you. Nothing here needs an account, and nothing you
           upload is kept.
         </p>
@@ -105,24 +106,71 @@ export default function ConversionsPage(): React.ReactElement {
                 {section.catalog
                   .filter((entry) => entry.source.id === source.id)
                   .map((entry) => (
-                    <Link
+                    <PairCard
                       key={entry.slug}
-                      className="tool-card"
                       href={entry.route}
-                      prefetch={false}
-                    >
-                      <FormatPair source={entry.source.label} target={entry.target.label} />
-                      <span className="tool-card-title">{entry.heading}</span>
-                      <span className="tool-card-blurb">
-                        A {entry.target.label} file, converted in the background.
-                      </span>
-                    </Link>
+                      source={entry.source.label}
+                      target={entry.target.label}
+                      heading={entry.heading}
+                      blurb={`A ${entry.target.label} file, converted in the background.`}
+                    />
                   ))}
               </div>
             </div>
           ))}
         </section>
       ))}
+      {FILE_CATEGORIES.map(({ key, label }) => {
+        const entries = FILE_CATALOG.filter((entry) => entry.category === key);
+        const sources = [...new Set(entries.map((entry) => entry.sourceLabel))];
+        if (sources.length === 0) return null;
+        return (
+          <section key={key} className="mt-12">
+            <h2 className="section-title">{label}</h2>
+            {sources.map((sourceLabel) => (
+              <div key={sourceLabel} className="mt-6">
+                <h3 className="meta">From {sourceLabel}</h3>
+                <div className="tool-grid mt-3">
+                  {entries
+                    .filter((entry) => entry.sourceLabel === sourceLabel)
+                    .map((entry) => (
+                      <PairCard
+                        key={entry.slug}
+                        href={entry.route}
+                        source={entry.sourceLabel}
+                        target={entry.targetLabel}
+                        heading={entry.heading}
+                        blurb={`A ${entry.targetLabel} file, ready to download.`}
+                      />
+                    ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      })}
     </main>
+  );
+}
+
+function PairCard({
+  href,
+  source,
+  target,
+  heading,
+  blurb,
+}: {
+  href: string;
+  source: string;
+  target: string;
+  heading: string;
+  blurb: string;
+}): React.ReactElement {
+  return (
+    <Link className="tool-card" href={href} prefetch={false}>
+      <FormatPair source={source} target={target} />
+      <span className="tool-card-title">{heading}</span>
+      <span className="tool-card-blurb">{blurb}</span>
+    </Link>
   );
 }

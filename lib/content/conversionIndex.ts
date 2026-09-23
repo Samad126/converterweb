@@ -11,6 +11,7 @@
  */
 import { AUDIO_CATALOG, VIDEO_CATALOG, type MediaConversionEntry } from "../media/mediaCatalog";
 import { AUDIO_FORMATS, VIDEO_FORMATS, type MediaFormat } from "../media/mediaFormats";
+import { FILE_CATALOG, FILE_CATEGORIES } from "../files/fileCatalog";
 import { CATALOG, FAMILY_LABELS, SOURCES, TARGETS, type Family } from "./catalog";
 
 export interface FinderTarget {
@@ -66,6 +67,29 @@ function mediaSources(
   }));
 }
 
+function fileGroups(): FinderGroup[] {
+  return FILE_CATEGORIES.flatMap(({ key, label }) => {
+    const entries = FILE_CATALOG.filter((entry) => entry.category === key);
+    const labels = [...new Set(entries.map((entry) => entry.sourceLabel))];
+    const sources: FinderSource[] = labels.map((sourceLabel) => {
+      const own = entries.filter((entry) => entry.sourceLabel === sourceLabel);
+      const extensions = own[0]?.extensions ?? [];
+      return {
+        key: `file:${sourceLabel.toLowerCase()}`,
+        label: sourceLabel,
+        badge: sourceLabel,
+        searchTerms: [...extensions, sourceLabel, label].map((term) => term.toLowerCase()),
+        targets: own.map((entry) => ({
+          href: entry.route,
+          label: entry.targetLabel,
+          badge: entry.targetLabel,
+        })),
+      };
+    });
+    return sources.length === 0 ? [] : [{ key: `files:${key}`, label, sources }];
+  });
+}
+
 function buildGroups(): FinderGroup[] {
   const families: Family[] = [];
   for (const source of SOURCES) {
@@ -85,9 +109,11 @@ function buildGroups(): FinderGroup[] {
   groups.push({ key: "audio", label: "Audio", sources: mediaSources(AUDIO_FORMATS, AUDIO_CATALOG, "audio") });
   groups.push({ key: "video", label: "Video", sources: mediaSources(VIDEO_FORMATS, VIDEO_CATALOG, "video") });
 
+  groups.push(...fileGroups());
+
   return groups;
 }
 
 export const FINDER_GROUPS: readonly FinderGroup[] = buildGroups();
 
-export const TOTAL_CONVERSIONS: number = CATALOG.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length;
+export const TOTAL_CONVERSIONS: number = CATALOG.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + FILE_CATALOG.length;
