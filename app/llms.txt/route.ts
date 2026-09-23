@@ -24,7 +24,7 @@ export function GET(): Response {
 
   const body = `# ${SITE_NAME}
 
-> Convert Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files to PDF and other formats, free and without an account. Files are uploaded to convert, never stored, and nothing is installed.
+> Convert Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files to PDF and other formats, convert audio and video, and use PDF tools — free and without an account. Files are uploaded to convert, never stored, and nothing is installed.
 
 Built by ${AUTHOR.name} (${AUTHOR.portfolio}). Source: ${AUTHOR.githubFrontend} (frontend), ${AUTHOR.githubBackend} (backend).
 
@@ -38,7 +38,9 @@ ${toolLines}
 
 ## Pages
 
-- [All conversions](${absoluteUrl("/conversions")}): The full catalog of conversion pages, grouped by format.
+- [All conversions](${absoluteUrl("/conversions")}): The full catalog of document, audio and video conversion pages, grouped by format.
+- [PDF tools](${absoluteUrl("/pdf")}): Merge, split, compress, OCR, sign, redact and more.
+- [Audio conversion](${absoluteUrl("/audio")}) and [video conversion](${absoluteUrl("/video")}): Transcode between common formats.
 - [About](${absoluteUrl("/about")}): Who built this and how it works.
 `;
 

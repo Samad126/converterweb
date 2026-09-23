@@ -23,16 +23,16 @@ import { SITE_NAME } from "@/lib/content/site";
 import { formatBytes } from "@/lib/format";
 
 /**
- * One page per conversion: `/word_to_pdf`, `/png_to_pdf`, and the other
- * thirty-four.
+ * One page per conversion: `/word_to_pdf`, `/png_to_pdf`, and every other
+ * document pair.
  *
  * The route is a root-level dynamic segment, which needs one word of
  * explanation. Static routes win over dynamic ones in the App Router, so
  * `/conversions` and `/sitemap.xml` resolve to their own files and never reach
  * here; `dynamicParams = false` then makes every slug not in `SLUGS` a real 404
  * at build time rather than a page rendered into a `notFound()`. The net effect
- * is a fixed, enumerable set of sixty-seven URLs and no way to reach a
- * sixty-eighth.
+ * is a fixed, enumerable set of URLs and no way to reach one that is not
+ * in the catalog.
  *
  * **The prose is the page; the converter is the product.** Everything outside
  * the tool — the heading, the lede, what to expect, the questions — is static

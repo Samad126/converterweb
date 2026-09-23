@@ -7,7 +7,7 @@
  * no route, no capability and no data. `Convert` doesn't enumerate all 36
  * catalog pairs (that's `/conversions`'s job); it shows `POPULAR` and points
  * at the index, and `Audio`/`Video` do the same with a handful of media pairs
- * each (their 210/182-page enumerations are `/audio`'s and `/video`'s job).
+ * each (their full enumerations are `/audio`'s and `/video`'s job).
  * The four PDF categories partition `PDF_TOOLS` exhaustively —
  * `tests/content/categories.test.ts` checks every id lands in exactly one group, so a
  * new tool silently missing a category fails the suite instead of the review.
@@ -113,8 +113,8 @@ export const CATEGORIES: readonly Category[] = [
     // categories here are what make `/audio` and `/video` reachable from the
     // header menu, the mobile menu and the homepage grid. `items` is a
     // handful of popular pairings rather than a full partition — the same
-    // shape `convert` uses, and for the same reason: enumerating 210 and 182
-    // pages is the hubs' job. Sources are resolved through `POPULAR_AUDIO`/
+    // shape `convert` uses, and for the same reason: enumerating every audio and video pair
+    // is the hubs' job. Sources are resolved through `POPULAR_AUDIO`/
     // `POPULAR_VIDEO`, so a slug renamed in `lib/media/mediaCatalog.ts` throws at
     // import rather than rendering a dead link.
     id: "audio",

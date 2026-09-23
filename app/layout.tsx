@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Convert Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files to PDF and other formats, free and without an account. Nothing is installed and no file is kept.",
+    "Convert Word, Excel, PowerPoint, ODT, ODS, ODP, CSV, TXT, HTML, RTF, PNG and JPG files to PDF and other formats, convert audio and video, and use PDF tools — free and without an account. Nothing is installed and no file is kept.",
   applicationName: SITE_NAME,
   authors: [{ name: SITE_NAME }],
   robots: { index: true, follow: true },

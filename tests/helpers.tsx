@@ -7,7 +7,7 @@
  *
  * Tests render `ConverterShell` rather than a page. The converter used to be
  * `app/page.tsx`; it is now a component the landing page, `/convert` and all
- * thirty-six conversion pages share, so rendering the component under test is
+ * conversion pages share, so rendering the component under test is
  * both closer to the truth and immune to the next round of routing.
  */
 import { fireEvent, render, screen } from "@testing-library/react";

@@ -7,7 +7,7 @@
  *
  * A `<FormatPair>` is therefore an outline tile for the source and a solid black
  * one for the target, joined by an arrow. The filled tile is the answer to
- * "which way does this go", which is the one thing a grid of sixty-seven cards
+ * "which way does this go", which is the one thing a grid of dozens of cards
  * makes genuinely hard to see — and it is the same trick the rest of the app
  * uses to mark emphasis (`.panel-strong`, `.chip-inverse`).
  */

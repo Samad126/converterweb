@@ -5,7 +5,7 @@ import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
 
 export const metadata: Metadata = {
   title: "About",
-  description: `Who built ${SITE_NAME} and why — a converter with two open-source repositories, a Node.js/LibreOffice service and a Next.js client.`,
+  description: `Who built ${SITE_NAME} and why — a converter with two open-source repositories, a Node.js service and a Next.js client.`,
   alternates: { canonical: "/about" },
   openGraph: { url: absoluteUrl("/about") },
 };
@@ -18,8 +18,9 @@ export default function AboutPage(): React.ReactElement {
       <header>
         <h1 className="page-title">About</h1>
         <p className="page-lede">
-          {SITE_NAME} converts documents, spreadsheets, presentations and images
-          between formats, free and without an account. It is a two-repository
+          {SITE_NAME} converts documents, spreadsheets, presentations, images,
+          audio and video between formats, and offers a set of PDF tools, free
+          and without an account. It is a two-repository
           project: a Node.js service that does the converting, and the Next.js
           site you&rsquo;re looking at.
         </p>
@@ -36,7 +37,8 @@ export default function AboutPage(): React.ReactElement {
         </p>
         <p className="body-text">
           LibreOffice headless does the core document conversions, but it is
-          not the only engine: PDF page operations (merge, split, rotate,
+          not the only engine: audio and video are transcoded with{" "}
+          <code>ffmpeg</code>, PDF page operations (merge, split, rotate,
           watermark and the rest) run on <code>pdf-lib</code>, PDF pages are
           rasterized with poppler&rsquo;s <code>pdftoppm</code>, password
           protection uses <code>qpdf</code>, a PDF exporting to Word,

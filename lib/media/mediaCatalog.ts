@@ -7,7 +7,7 @@
  * two are not interchangeable sentences. A media transcode has no such
  * story — `backend/src/formats-media.ts` runs the same zero-flag `ffmpeg -i
  * in out` for every pair of its own kind, so "MP3 to WAV" and "MP3 to FLAC"
- * differ only in which two labels are in the sentence. Writing 392 pairs of
+ * differ only in which two labels are in the sentence. Writing every pair of
  * fabricated distinctions would be dishonest content; a single template
  * filled in per pair is the honest version of the same page count.
  *

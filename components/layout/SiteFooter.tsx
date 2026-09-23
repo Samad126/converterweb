@@ -1,7 +1,7 @@
 /**
  * The site footer.
  *
- * This is where all sixty-seven document conversions are linked from every
+ * This is where every document conversion are linked from every
  * page, alongside a handful of popular audio/video pairs and the three hubs
  * themselves. That is a lot of links for a footer, and it is the reason the
  * header can stay short: the crawl depth to any conversion page is one,

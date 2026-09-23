@@ -5,7 +5,7 @@
  *
  * Three sources, each already the single place its own facts live:
  *
- *   - `lib/content/catalog.ts` (`CATALOG`) — the 36 `{source}_to_{target}` pages.
+ *   - `lib/content/catalog.ts` (`CATALOG`) — the `{source}_to_{target}` pages.
  *     Every extension and target id here is checked against `GET /formats` by
  *     `tests/content/catalog.test.tsx`, so re-deriving them from the matrix in this
  *     file would be a second copy of a fact that file already guarantees.

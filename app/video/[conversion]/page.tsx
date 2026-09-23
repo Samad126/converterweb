@@ -18,7 +18,7 @@ import { breadcrumbList, faqPage } from "@/lib/content/schema";
 /**
  * One page per video pair: `/video/mp4_to_webm`, and 181 others. See
  * `lib/media/mediaCatalog.ts` for why the copy is templated rather than hand-written
- * the way `app/[conversion]/page.tsx`'s 36 document pages are.
+ * the way `app/[conversion]/page.tsx`'s document pages are.
  */
 export const dynamicParams = false;
 

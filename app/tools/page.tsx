@@ -19,7 +19,7 @@ export const metadata: Metadata = {
  * conversion — a Photoshop file, or a Word document read for its tables
  * rather than converted whole — and reach exactly one target each. See the
  * note at the top of `lib/content/catalog.ts`
- * for why that makes them a poor fit for the 36-page conversion matrix. This
+ * for why that makes them a poor fit for the conversion matrix. This
  * page is `lib/content/categories.ts`'s `extract` category, given a permanent home
  * instead of pointing at `/pdf`, which neither tool's input format has
  * anything to do with.

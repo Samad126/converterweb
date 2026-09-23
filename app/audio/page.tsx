@@ -7,7 +7,7 @@ import { AUDIO_FORMATS } from "@/lib/media/mediaFormats";
 import { breadcrumbList, pageList } from "@/lib/content/schema";
 
 /**
- * The crawl hub for the 210 `/audio/*` pages — the media equivalent of
+ * The crawl hub for the `/audio/*` pages — the media equivalent of
  * `/conversions`. Grouped by source format so the list stays scannable.
  */
 export const metadata: Metadata = {

@@ -7,7 +7,7 @@ import { VIDEO_FORMATS } from "@/lib/media/mediaFormats";
 import { breadcrumbList, pageList } from "@/lib/content/schema";
 
 /**
- * The crawl hub for the 182 `/video/*` pages — the media equivalent of
+ * The crawl hub for the `/video/*` pages — the media equivalent of
  * `/conversions`. Grouped by source format so the list stays scannable.
  */
 export const metadata: Metadata = {

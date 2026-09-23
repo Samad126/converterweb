@@ -42,7 +42,7 @@
  * ---------------------------------------------------------------------------
  *
  * Copy is assembled from a source group, a target note and a pair-specific
- * sentence rather than written out 36 times. That is not only for brevity: it
+ * sentence rather than written out once per page. That is not only for brevity: it
  * means a fact that is true of every Word conversion (the three extensions that
  * import identically) or of every image target (the ZIP) is stated once and
  * cannot drift between pages. The pair sentence is what stops the pages being
@@ -319,7 +319,7 @@ export const TARGETS: Readonly<Record<DocTargetId, TargetNote>> = {
  *
  * Separate from `TargetNote` because it answers a different question. `promise`
  * is for someone already reading the page ("what exactly will I get"); this is
- * for someone scanning sixty-seven cards, and has to be readable at a glance in a
+ * for someone scanning dozens of cards, and has to be readable at a glance in a
  * column about a third of the page wide.
  *
  * Keyed by target alone, deliberately. The card's title already carries the
@@ -993,7 +993,7 @@ export function composeEntry(
     heading,
     searchPhrase: heading,
     title: `${heading} — Free Online Converter`,
-    // Composed rather than written 36 times, so the promise and the privacy
+    // Composed rather than written once per page, so the promise and the privacy
     // sentence say the same thing on every page. Measured in tests, not by eye.
     description: `Convert ${source.noun} to ${note.label} free online. ${note.metaNote} No sign-up, up to ${formatBytes(MAX_UPLOAD_BYTES)}, no file left on the server.`,
     lede: `Convert ${source.noun} to ${note.label} in the browser: you get ${note.promise}. Nothing to install, no account to make, and the file comes straight back.`,
@@ -1060,7 +1060,7 @@ export const HOME_FAQS: readonly { question: string; answer: string }[] = [
   {
     question: "What can this converter do?",
     answer:
-      "It converts between document, spreadsheet, presentation and image formats in both directions where the formats allow it: Word, Excel, PowerPoint (including their older extensions), ODT, ODS, ODP, ODG, CSV, TXT, HTML, RTF, Markdown and other plain-text markup, PNG and JPG in, and now PDF itself back in too — PDF to Word, PowerPoint, Excel or Markdown. Every combination the service supports has its own page — see all conversions.",
+      "It converts between document, spreadsheet, presentation and image formats in both directions where the formats allow it: Word, Excel, PowerPoint (including their older extensions), ODT, ODS, ODP, ODG, CSV, TXT, HTML, RTF, Markdown and other plain-text markup, PNG and JPG in, and now PDF itself back in too — PDF to Word, PowerPoint, Excel or Markdown. It also transcodes audio (MP3, WAV, FLAC and more) and video (MP4, WEBM, MKV and more), and has PDF tools such as merge, split, compress, OCR, sign and redact. Every conversion the service supports has its own page — see all conversions.",
   },
   {
     question: "Can I convert a PDF back into Word or Excel?",

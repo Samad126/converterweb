@@ -7,8 +7,8 @@ import { Faq } from "@/components/ui/Faq";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ToolSearch } from "@/components/search/ToolSearch";
 import { CATALOG, HOME_FAQS } from "@/lib/content/catalog";
+import { TOTAL_CONVERSIONS } from "@/lib/content/conversionIndex";
 import { CATEGORIES } from "@/lib/content/categories";
-import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
 import { PDF_TOOLS } from "@/lib/pdf/pdfTools";
 import { faqPage, itemList } from "@/lib/content/schema";
 import { SITE_NAME, absoluteUrl } from "@/lib/content/site";
@@ -18,7 +18,7 @@ import { SITE_NAME, absoluteUrl } from "@/lib/content/site";
  *
  * A server component, and deliberately a thin one. All of the content below is
  * static JSX built from `lib/content/catalog.ts`, so the whole page — heading, prose,
- * and all sixty-seven links — is in the HTML that leaves the server. There is no
+ * and every link — is in the HTML that leaves the server. There is no
  * client component anywhere on this page, which means there is nothing to
  * hydrate and nothing that can fail to render for a crawler.
  *
@@ -91,12 +91,8 @@ export default function HomePage(): React.ReactElement {
               number. */}
           <dl className="hero-stats">
             <div className="stat">
-              <dt className="stat-label">Document conversions</dt>
-              <dd className="stat-value">{CATALOG.length}</dd>
-            </div>
-            <div className="stat">
-              <dt className="stat-label">Audio &amp; video</dt>
-              <dd className="stat-value">{AUDIO_CATALOG.length + VIDEO_CATALOG.length}</dd>
+              <dt className="stat-label">Conversions</dt>
+              <dd className="stat-value">{TOTAL_CONVERSIONS}</dd>
             </div>
             <div className="stat">
               <dt className="stat-label">PDF tools</dt>

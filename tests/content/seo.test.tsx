@@ -152,7 +152,7 @@ describe("the routes", () => {
   });
 
   it("links every conversion from the homepage", () => {
-    // `HomePage` itself only links the tools grid; the full set of thirty-six
+    // `HomePage` itself only links the tools grid; the full set of
     // conversions is reached through `SiteFooter`, which every page renders
     // via the root layout — so the two together are what a crawler sees.
     const { container } = render(

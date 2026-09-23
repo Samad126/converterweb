@@ -9,7 +9,8 @@ import { absoluteUrl } from "@/lib/content/site";
  * The sitemap.
  *
  * The homepage, the three hubs (`/conversions`, `/audio`, `/video`), and one
- * URL per conversion — 36 document pairs plus 392 audio/video pairs. The
+ * URL per conversion (document, audio and video), plus the PDF tools and the
+ * static pages. The
  * conversion pages are `priority: 0.8`/`0.7` rather than the homepage's `1`
  * because they are the pages that earn the traffic and the homepage is the
  * page that routes it — but priority is a hint Google has said it ignores, so

@@ -16,9 +16,9 @@ import {
 import { breadcrumbList, faqPage } from "@/lib/content/schema";
 
 /**
- * One page per audio pair: `/audio/mp3_to_wav`, and 209 others. See
+ * One page per audio pair: `/audio/mp3_to_wav`, and every other audio pair. See
  * `lib/media/mediaCatalog.ts` for why the copy is templated rather than hand-written
- * the way `app/[conversion]/page.tsx`'s 36 document pages are.
+ * the way `app/[conversion]/page.tsx`'s document pages are.
  */
 export const dynamicParams = false;
 
