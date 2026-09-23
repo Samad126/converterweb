@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
   // root on every dev run. This repository documents itself in README.md, and
   // two generated files that say the same thing in less detail are noise.
   agentRules: false,
+  // Tailwind's stylesheet is small; inlining it removes the render-blocking
+  // CSS request that delays first paint and LCP on slow mobile connections.
+  experimental: { inlineCss: true },
   // The page loads nothing from anywhere else (see `app/layout.tsx`), so the
   // policy can say so. `'unsafe-inline'` is for Next's own bootstrap scripts and
   // the JSON-LD block; a nonce would remove it but forces dynamic rendering.
