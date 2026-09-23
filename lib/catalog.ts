@@ -318,7 +318,7 @@ export const TARGETS: Readonly<Record<DocTargetId, TargetNote>> = {
  *
  * Separate from `TargetNote` because it answers a different question. `promise`
  * is for someone already reading the page ("what exactly will I get"); this is
- * for someone scanning thirty-six cards, and has to be readable at a glance in a
+ * for someone scanning sixty-seven cards, and has to be readable at a glance in a
  * column about a third of the page wide.
  *
  * Keyed by target alone, deliberately. The card's title already carries the

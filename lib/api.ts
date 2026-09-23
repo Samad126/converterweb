@@ -3,14 +3,14 @@
  *
  * The browser talks to the converter directly. There is no Next route handler
  * in front of it, on purpose: a handler would add its own timeout to a budget
- * that is already 120 seconds, and it would hold a second copy of a 25 MiB
+ * that is already 120 seconds, and it would hold a second copy of a 100 MiB
  * upload in memory while streaming it through. The base URL is
  * `NEXT_PUBLIC_CONVERTER_BASE_URL`, defaulting to same-origin — which is how
  * this is deployed, with the reverse proxy serving both the page and the API.
  *
  * `convert` uses `XMLHttpRequest` rather than `fetch`, for two things `fetch`
  * cannot do: report upload progress (`upload.onprogress`) and be cancelled
- * mid-flight (`xhr.abort()`). Those are not niceties here — a 25 MiB upload
+ * mid-flight (`xhr.abort()`). Those are not niceties here — a 100 MiB upload
  * over a phone connection without a progress bar is indistinguishable from a
  * hung page, and a conversion that has already run for two minutes with no way
  * to stop it is worse.

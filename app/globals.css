@@ -1099,7 +1099,7 @@
   /*
    * The wide container, as opposed to the 640px column the converter itself
    * sits in. Two measures, because they do opposite jobs: a form wants a short
-   * line so the eye does not have to travel, and a page of thirty-six tiles
+   * line so the eye does not have to travel, and a page of sixty-seven tiles
    * wants the width for the grid to be a grid.
    */
   .shell {
@@ -1981,7 +1981,7 @@
    * `:has()` selector cannot match on a value it has not been told about.
    *
    * `display: none` hides a card from a sighted visitor; it removes nothing from
-   * the document, so all thirty-six links stay in the HTML for a crawler. The
+   * the document, so all sixty-seven links stay in the HTML for a crawler. The
    * "All" pill has no rule — a card is shown until a category is chosen, which
    * makes the default case the one that needs no CSS at all.
    */
@@ -2026,7 +2026,7 @@
   /*
    * Hover raises the tile rather than inverting it.
    *
-   * The inversion this replaced was the loudest thing on the page — thirty-six
+   * The inversion this replaced was the loudest thing on the page — sixty-seven
    * tiles flashing to solid black as the pointer crossed the grid, and in dark
    * mode flashing to solid white. Raising the tile says the same thing with the
    * shadow and the edge, and says it once.
@@ -2064,7 +2064,7 @@
 
   /*
    * The monogram tile. Outline for a source, solid for a target — which is how
-   * a grid of thirty-six cards says "this one goes this way" without spending
+   * a grid of sixty-seven cards says "this one goes this way" without spending
    * the accent on it.
    */
   .badge {

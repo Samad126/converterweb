@@ -13,7 +13,7 @@
  * to reimplement both — and the filtering itself is done in CSS by
  * `:has()`, which is already used elsewhere in `app/globals.css`.
  *
- * The consequence worth stating: all thirty-six links are always in the
+ * The consequence worth stating: all sixty-seven links are always in the
  * document. The filter hides cards from a sighted visitor; it hides nothing from
  * a crawler, and nothing from a screen reader that has not chosen a category.
  *

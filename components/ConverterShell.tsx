@@ -5,7 +5,7 @@
  *
  * This is everything `app/page.tsx` used to be, minus the heading, the `<main>`
  * and the footer — so that every conversion page renders one implementation of
- * the four conversion states rather than thirty-six that drift.
+ * the four conversion states rather than sixty-seven that drift.
  *
  * The two props are what a conversion page says about itself, and both are
  * narrowing rather than preference:

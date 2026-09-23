@@ -1,22 +1,33 @@
 # File converter — web client
 
-Convert a document, spreadsheet, presentation or image into another format.
-Next.js (App Router) + TypeScript + Tailwind, tested with Vitest, React Testing
-Library and MSW.
+Convert a document, spreadsheet, presentation, image, audio or video file into
+another format, or run a PDF-only tool (merge, split, OCR, sign, redact and the
+rest) directly on a PDF. Next.js (App Router) + TypeScript + Tailwind, tested
+with Vitest, React Testing Library and MSW.
 
-The site has three surfaces:
+The site is organised into a handful of surfaces, each with its own hub and its
+own family of dedicated, single-purpose pages:
 
 | Surface | What it is |
 | --- | --- |
-| `/` | The landing page: what the service does, and a grid of every conversion it can perform |
-| `/{source}_to_{target}` | One page per conversion — thirty-six of them, e.g. `/word_to_pdf` |
-| `/conversions` | The full index, grouped by document family |
+| `/` | The landing page: what the service does, task categories, and links into every family below |
+| `/{source}_to_{target}` | One page per document/spreadsheet/presentation/image conversion — 67 of them, e.g. `/word_to_pdf`, `/pdf_to_docx` |
+| `/conversions` | The full document-conversion index, grouped by family |
+| `/audio`, `/audio/{source}_to_{target}` | The audio hub and its 210 conversion pages, e.g. `/audio/mp3_to_wav` |
+| `/video`, `/video/{source}_to_{target}` | The video hub and its 182 conversion pages, e.g. `/video/mp4_to_webm` |
+| `/pdf`, `/pdf/{tool}` | The PDF-tools hub and its 20 tool pages (merge, split, OCR, sign, redact, compare, and more) — these act on a PDF, they do not convert a format |
+| `/tools`, `/tools/{tool}` | The two extraction tools that fit neither matrix: `extract-tables` (Word) and `psd-to-layers` (PSD) |
+| `/about` | Who built it and how the two repositories (this client, and the conversion service) fit together |
+| `/llms.txt` | A plain-text index of every page, generated from the same catalogs, for AI assistants and answer engines |
 
 Every conversion page carries the converter itself, showing only that
 conversion: the format is fixed, the file input accepts only the extensions that
 page is for, and there is no format picker to distract from the one job. There is
 no separate "convert anything" page either — `/convert`, which the single-page
-version of this app served at `/`, is gone.
+version of this app served at `/`, is gone. The audio and video pages work the
+same way but submit to async media jobs rather than a synchronous response; the
+PDF tool pages don't pick a target at all, since the tool itself *is* the
+operation.
 
 The service is consumed by an already-shipped Android client, so its behaviour
 is pinned. Nothing in here wraps, improves or re-interprets it: the client sends
@@ -32,7 +43,7 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run build        # production build
 npm start            # serve the build
-npm run test         # vitest, 155 tests
+npm run test         # vitest, 274 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
 npm run gen:api      # regenerate lib/api-types.ts from openapi.json
@@ -63,7 +74,7 @@ See `.env.example`.
 
 The browser talks to the API directly. There is no Next route handler in front
 of it on purpose: a handler would add its own timeout to a budget that is
-already 120 seconds, and it would hold a second copy of a 25 MiB upload in
+already 120 seconds, and it would hold a second copy of a 100 MiB upload in
 memory while streaming it through.
 
 As deployed, this **is** set — to `https://converterapi.alakbaroff.com`, in
@@ -182,6 +193,19 @@ rule directly, which is why the exemption is not a hole. If you are adding a pag
 that needs to name a format, put it in the catalog rather than widening that
 exemption.
 
+`lib/catalog.ts` also exports `EXTRA_TOOLS` — the two standalone extraction
+tools at `/tools/extract-tables` and `/tools/psd-to-layers`, which take a
+source format (Word, PSD) the rest of the site never converts as a whole file
+and reach exactly one target each, so they don't fit `{source}_to_{target}`.
+Audio and video are the same idea at a different scale: `lib/mediaFormats.ts`
+and `lib/mediaCatalog.ts` mirror `lib/catalog.ts`'s shape (source formats,
+target notes, a generated catalog of pairs) but for the async media pipeline,
+under `/audio` and `/video` rather than the root. PDF-only tools — operations
+on a PDF that are not a conversion at all — live in `lib/pdfTools.ts` and are
+grouped for the homepage and `/pdf` by `lib/categories.ts`, which also
+partitions every `PDF_TOOLS` entry into a category and is checked exhaustive by
+`tests/categories.test.ts`.
+
 ### A page is about one conversion
 
 `/word_to_pdf` shows the word-to-PDF conversion and nothing else. Two props on
@@ -254,12 +278,19 @@ different targets, the test would fail rather than a page quietly overpromising.
 
 Two consequences worth knowing:
 
-- **There are 36 pages, not 52.** The matrix has 16 source extensions and 52
-  extension-to-target pairs; grouping collapses them to 36.
-- **PDF is never an input.** There is no `.pdf` entry in the service's `SOURCES`,
-  so there is no `pdf_to_word` page and no `pdf_to_png` page, and the landing
-  page never implies otherwise. Every other converter on the internet does this
-  the other way round, which is why `/not-found` says so explicitly.
+- **Grouping means the page count is smaller than the raw extension count.**
+  `lib/catalog.ts` currently has 67 entries in `CATALOG`, from 18 source groups
+  (`SOURCES.length`) — fewer pages than one per raw extension because, as above,
+  extensions that share an import filter and reach the same targets share a page.
+- **PDF used to never be an input; it now is, for a fixed set of targets.** An
+  earlier version of the service had no `.pdf` entry in `SOURCES` at all, and
+  `app/not-found.tsx` still leads with that as the likely reason someone landed
+  there. The service now extracts a PDF's own content back out — `pdf_to_docx`,
+  `pdf_to_pptx`, `pdf_to_xlsx`, `pdf_to_markdown`, `pdf_to_png`, `pdf_to_jpg` and
+  `pdf_to_pdfa` all exist — through a separate export engine, noted in
+  `lib/catalog.ts`. What is still true: PDF never converts to itself, and a
+  PDF's own pages (`word_to_pdf` and so on) still only ever *produce* PDF, never
+  accept one.
 
 ## What the code is built on
 
@@ -275,14 +306,14 @@ Two consequences worth knowing:
 | A page locks its format and narrows its input; it never offers a picker | `components/ConverterShell.tsx`, `app/[conversion]/page.tsx` |
 | A page cannot claim a conversion the live matrix does not confirm | `canConvert` in `lib/useConverter.ts`, `tests/locked.test.tsx` |
 | The grid is server-rendered links; the filter is CSS `:has()` only | `components/ToolGrid.tsx`, `app/globals.css` |
-| Internal navigation is `next/link`; the 72 bulk links opt out of prefetch | `components/ToolCard.tsx`, `components/SiteFooter.tsx` |
+| Internal navigation is `next/link`; the catalog's bulk links opt out of prefetch | `components/ToolCard.tsx`, `components/SiteFooter.tsx` |
 | Every conversion page has one `<h1>` and its own canonical | `app/[conversion]/page.tsx`, `tests/seo.test.tsx` |
 | Structured data only describes what the page visibly shows | `lib/schema.ts`, compared in `tests/seo.test.tsx` |
 | PDF is an output, never an input — no page says otherwise | asserted in `tests/catalog.test.tsx` |
 | Image targets are archives, decided by `multiple` | `lib/constants.ts`, `lib/formats.ts` (`downloadExtension`) |
 | Both RFC 6266 filename forms, `filename*` preferred | `lib/contentDisposition.ts` |
 | Exactly one `file` part, as `application/octet-stream` | `lib/api.ts`, asserted byte-for-byte in `tests/transport.test.ts` |
-| 26214400 bytes, checked before the request | `lib/constants.ts`, `lib/useConverter.ts` (`selectFile`) |
+| 104857600 bytes (100 MiB), checked before the request | `lib/constants.ts` (`MAX_UPLOAD_BYTES`), `lib/useConverter.ts` (`selectFile`) |
 | The client gives up at 120 s, after the server's 90 s | `lib/constants.ts` (`CLIENT_ABORT_MS`) |
 | `X-Request-Id` shown under an error with a copy button | `components/ErrorNote.tsx` |
 | Unauthenticated; no keys, tokens or login | nowhere, deliberately |
@@ -319,7 +350,7 @@ shows the error and a **Try again**, and nothing else. Four failures mean the
 - `422` — password protected. Retrying the same file can only fail again, so
   **Choose a different file**, which clears the selection and moves focus to the
   input.
-- A client-side refusal (wrong extension, over 25 MiB) never reached the server,
+- A client-side refusal (wrong extension, over 100 MiB) never reached the server,
   so it takes the same route: **Choose a different file**, and no request is
   made.
 
@@ -348,23 +379,38 @@ learning the matrix does not shove the primary button down the page. It is a
 reservation and not an exact prediction — the real height depends on how many
 targets the server declares — and the picker is in the same element either way.
 
-## Visual design: strict black and white
+## Visual design: Monochrome & Slate
 
-Achromatic only. There is no hue in the app and there cannot be one: the whole
-Tailwind colour namespace is cleared in `app/globals.css`
-(`@theme { --color-*: initial }`), so `bg-red-500` is not a class that exists,
-and every colour resolves through the tokens in `:root`.
+The strict black-and-white rule this app started with has been lifted. What
+replaced it, `app/globals.css` calls Monochrome & Slate: deep blacks, crisp
+whites and neutral greys, with exactly **one** saturated colour held back for
+the things a visitor is meant to press — the convert button, the selected
+target, the active filter, the conversion progress, the focus ring, and
+nothing else. A charcoal slate is the secondary accent (format badges,
+secondary marks); status keeps its own small chromatic set (warning, danger)
+because "something went wrong" has to read as itself rather than as more grey.
+Every other distinction in the app is still carried by weight, size and rule
+rather than by hue — that discipline is what survived from the original rule,
+not the achromatic constraint itself.
 
-`tests/achromatic.test.ts` compiles the stylesheet through the real Tailwind
-pipeline and reads every colour out of the declarations — hex, `rgb()`,
-`hsl()`, `oklch()` and the 148 CSS named colours — failing if any of them has a
-hue. It is how the rule survives the next person who wants a "success green".
+The whole Tailwind colour namespace is still cleared in `app/globals.css`
+(`@theme { --color-*: initial }`), so `bg-red-500` is not a class that exists
+and every colour has to resolve through the tokens in `:root`. What changed is
+what's allowed to be *in* those tokens.
 
-Meaning comes from type size and weight, the weight of a rule (1 px hairline
-against 2 px emphasis), whitespace, and inversion — a black block on white for
-the result, white on black for the primary action. Errors are a 2 px black left
-rule with a bold **Error** label; success is an inverted chip with a check
-glyph. Dark mode is a straight inversion of the same tokens under
+`tests/palette.test.ts` replaced `tests/achromatic.test.ts` for exactly that
+reason: the old test failed on any hue at all, and that rule is no longer true.
+The new one compiles the stylesheet through the real Tailwind pipeline and
+fails if any colour it finds is outside an explicit, named palette — enforcing
+"nothing added without a commit that says why" rather than "no colour, ever".
+
+Meaning comes from type size and weight, the weight of a rule (2 px border, 4 px
+division, 6 px band break), whitespace, and inversion — a filled block for the
+result, the accent for the primary action. Errors are a left rule with a bold
+**Error** label; success reuses the accent colour on purpose, so a completed
+conversion is the same colour as the button that started it and green never
+appears. Dark mode is not a straight inversion any more — it has its own rows
+in the palette — but it follows the same four devices under
 `prefers-color-scheme`.
 
 ### The landing page, and the icons it could not have
@@ -426,20 +472,34 @@ Two other decisions on that page are worth knowing:
 ## Tests
 
 ```
-tests/contentDisposition.test.ts   the two RFC 6266 forms, decoding, sanitising
-tests/transport.test.ts            the real multipart bytes, abort, the 120 s deadline
-tests/conversion.test.tsx          the happy paths, media-type mismatch, archives, preview
-tests/failures.test.tsx            every status, the envelope, error.code never in the DOM
-tests/matrix.test.tsx              the picker follows /formats; no hard-coded matrix
-tests/service.test.tsx             health, the phases, cancel, timeout, loading
-tests/progress.test.tsx            the two phases of the meter
-tests/errors.test.ts               the envelope, our sentences, status → recovery
-tests/format.test.ts               bytes, durations, extensions
-tests/preview.test.ts              escaping and the preview document
-tests/achromatic.test.ts           the black-and-white rule, compiled
-tests/catalog.test.tsx             the catalog against the matrix, both directions
-tests/locked.test.tsx              a page locks its format, narrows its input, and cannot lie
-tests/seo.test.tsx                 one h1, metadata, JSON-LD, and every link in the HTML
+tests/contentDisposition.test.ts    the two RFC 6266 forms, decoding, sanitising
+tests/transport.test.ts             the real multipart bytes, abort, the 120 s deadline
+tests/transport/                    fixtures for the above (a real server on an ephemeral port)
+tests/conversion.test.tsx           the happy paths, media-type mismatch, archives, preview
+tests/failures.test.tsx             every status, the envelope, error.code never in the DOM
+tests/matrix.test.tsx               the picker follows /formats; no hard-coded matrix
+tests/service.test.tsx              health, the phases, cancel, timeout, loading
+tests/progress.test.tsx             the two phases of the meter
+tests/errors.test.ts                the envelope, our sentences, status → recovery
+tests/format.test.ts                bytes, durations, extensions
+tests/preview.test.ts               escaping and the preview document
+tests/achromatic.test.ts            the black-and-white rule, compiled
+tests/catalog.test.tsx              the catalog against the matrix, both directions
+tests/locked.test.tsx               a page locks its format, narrows its input, and cannot lie
+tests/seo.test.tsx                  one h1, metadata, JSON-LD, and every link in the HTML
+tests/bulk-conversion.test.tsx      multi-file /convert requests, per-file errors.json
+tests/categories.test.ts            every PDF_TOOLS id lands in exactly one homepage category
+tests/extraction-tools.test.tsx     the two /tools pages (extract-tables, psd-to-layers)
+tests/palette.test.ts               the achromatic token set stays achromatic under theming
+tests/pdfCoords.test.ts             page-space ↔ screen-space coordinate math for PDF editing
+tests/pdf-form-fields-compare.test.tsx  form-field detection and PDF diffing
+tests/pdf-multi-tools.test.tsx      merge, split, organize and the other multi-file PDF tools
+tests/pdf-sign-redact-edit.test.tsx sign, redact and edit tool behaviour
+tests/pdf-tools-pages.test.tsx      the /pdf/* pages themselves — one per tool
+tests/pdf-tools.test.tsx            the shared PDF-tool plumbing (lib/pdfTools.ts and friends)
+tests/search.test.ts                the search index built from every catalog
+tests/search-ui.test.tsx            the search box's own behaviour
+tests/zip.test.ts                   building/reading the archive responses client-side
 ```
 
 Two things are tested outside MSW, and both for the same reason — MSW's XHR
@@ -469,11 +529,13 @@ upload throws before it leaves the client.
 - **The browser pass, in full.** It has been run further than before: the landing
   page, a conversion page and the converter were rendered in headless Chromium at
   360 px and 1440 px, in light and dark, and the built stylesheet was checked to
-  contain the `:has()` filter rules and no chromatic value. Still unverified by
-  eye: **keyboard-only traversal**, **200 % zoom**, and **`prefers-reduced-motion`**
-  in a real browser. Those three are asserted where they can be asserted without
-  a viewport (the focus rules, the reduced-motion block), but "it behaves" is not
-  the same as "it looks right", and neither has been watched.
+  contain the `:has()` filter rules and stay inside the approved palette. Still
+  unverified by eye: **keyboard-only traversal**, **200 % zoom**, and
+  **`prefers-reduced-motion`** in a real browser. Those three are asserted where
+  they can be asserted without a viewport (the focus rules, the reduced-motion
+  block), but "it behaves" is not the same as "it looks right", and neither has
+  been watched. The audio, video and PDF-tool surfaces are newer than that pass
+  and have not had one of their own.
 - **The end-to-end run against the service.** The request and response shapes
   were confirmed against the running service with real documents — a real
   `.docx` to `pdf`, `txt` and a `.pptx` to a ZIP of page images, checking

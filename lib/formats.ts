@@ -195,7 +195,7 @@ export function unsupportedFileMessage(
 }
 
 /**
- * The sentence shown when a file is over the contract's 25 MiB limit.
+ * The sentence shown when a file is over the contract's 100 MiB limit.
  *
  * Both numbers are shown, because "too large" without the actual size leaves
  * the person guessing which of their files would fit.

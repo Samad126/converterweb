@@ -16,7 +16,7 @@
  * simply never shows a target it cannot reach; there is nothing here for a
  * person to pick that doesn't lead to a real page.
  *
- * A widget, not the only path: every one of these thirty-six pages is also
+ * A widget, not the only path: every one of these sixty-seven pages is also
  * linked from the family sections directly below, so nothing here has to
  * work without JavaScript for the site to stay fully crawlable.
  */

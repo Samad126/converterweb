@@ -18,7 +18,7 @@ import { SITE_NAME, absoluteUrl } from "@/lib/site";
  *
  * A server component, and deliberately a thin one. All of the content below is
  * static JSX built from `lib/catalog.ts`, so the whole page — heading, prose,
- * and all thirty-six links — is in the HTML that leaves the server. There is no
+ * and all sixty-seven links — is in the HTML that leaves the server. There is no
  * client component anywhere on this page, which means there is nothing to
  * hydrate and nothing that can fail to render for a crawler.
  *

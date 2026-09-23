@@ -11,7 +11,7 @@ import { breadcrumbList, itemList } from "@/lib/schema";
  * Every conversion, grouped by document family.
  *
  * This is the crawl hub. The homepage grid and the footer already link all
- * thirty-six pages, so nothing here is reachable *only* from this page — it
+ * sixty-seven pages, so nothing here is reachable *only* from this page — it
  * exists because a page that lists everything with a sentence of context is a
  * better landing point than a grid of tiles when what you want is to compare
  * options, and because a hub with descriptive headings around its links is a

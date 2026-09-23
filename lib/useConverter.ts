@@ -15,7 +15,7 @@
  *      asked for — `lib/api.ts` does not know what was requested, and the
  *      contract makes a wrong type on a `200` a failure rather than a download.
  *   2. The object URL is created once and revoked on unmount, on reset, and
- *      before the next conversion. A page that forgets holds a 25 MiB blob
+ *      before the next conversion. A page that forgets holds a 100 MiB blob
  *      alive for the lifetime of the tab.
  *   3. A conversion failure is a normal event. Nothing here logs, retries,
  *      or escalates on its own; it moves to a state that offers the person a

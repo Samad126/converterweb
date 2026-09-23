@@ -6,11 +6,8 @@ import { POPULAR } from "@/lib/catalog";
 /**
  * The 404.
  *
- * A wrong URL is overwhelmingly likely to be a conversion we do not do — most
- * plausibly `pdf_to_word`, since that is what every other converter on the
- * internet offers and this one deliberately does not. So the page leads with
- * what does exist rather than with an apology, and says plainly that PDF is not
- * an input, because that is the question the visitor is about to ask.
+ * A wrong URL is overwhelmingly likely to be a conversion we do not do. So
+ * the page leads with what does exist rather than with an apology.
  *
  * `robots: noindex` because a 404 has no business in an index; Next already
  * serves this with a 404 status, and this makes it unambiguous.
@@ -27,9 +24,8 @@ export default function NotFound(): React.ReactElement {
         <p className="eyebrow">404</p>
         <h1 className="page-title mt-3">That conversion does not exist</h1>
         <p className="page-lede">
-          There is no converter at this address. If you were looking for a page
-          that turns a PDF into something else, that is the one thing this
-          service cannot do: PDF is an output here, never an input.
+          There is no converter at this address. Have a look at what this
+          service does support below.
         </p>
       </header>
 
