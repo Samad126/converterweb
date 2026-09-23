@@ -177,7 +177,7 @@ function buildEntry(
     faqs: [
       {
         question: `Which files can I convert to ${targetLabel}?`,
-        answer: `${sourceLabel} files (${accepted}), up to ${limit} each. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
+        answer: `${sourceLabel} files (${accepted}), up to ${limit} in total. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
       },
       {
         question: "Is my file kept?",

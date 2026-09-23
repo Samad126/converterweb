@@ -58,12 +58,12 @@ function composeEntry(kind: MediaKind, source: MediaFormat, target: MediaFormat)
     target,
     heading,
     title: `${heading} — Free Online Converter`,
-    description: `Convert ${source.label} to ${target.label} free online. No sign-up, files up to 500 MB, and nothing left on the server.`,
+    description: `Convert ${source.label} to ${target.label} free online. No sign-up, files up to 100 MB, and nothing left on the server.`,
     lede: `Convert a ${source.label} file to ${target.label} in the browser. Nothing to install, no account to make, and the file comes straight back once it's done.`,
     faqs: [
       {
         question: `Which files can I convert to ${target.label}?`,
-        answer: `Any ${source.label} (${source.extension}) file, up to 500 MB. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
+        answer: `Any ${source.label} (${source.extension}) file, up to 100 MB. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
       },
       {
         question: `What does the ${target.label} output look like?`,

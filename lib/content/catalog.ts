@@ -1000,7 +1000,7 @@ export function composeEntry(
     cardBlurb: `${CARD_LEADS[target]}.`,
     angle,
     expect: [
-      `Files accepted: ${accepted} — up to ${formatBytes(MAX_UPLOAD_BYTES)} each.`,
+      `Files accepted: ${accepted} — up to ${formatBytes(MAX_UPLOAD_BYTES)}, and 15 files or ${formatBytes(MAX_UPLOAD_BYTES)} combined per batch.`,
       note.caveat,
       source.blurb,
       ...(others.length > 0
@@ -1014,7 +1014,7 @@ export function composeEntry(
     faqs: [
       {
         question: `Which files can I convert to ${note.label}?`,
-        answer: `${source.noun.charAt(0).toUpperCase()}${source.noun.slice(1)}: ${accepted}. Up to ${formatBytes(MAX_UPLOAD_BYTES)} each. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
+        answer: `${source.noun.charAt(0).toUpperCase()}${source.noun.slice(1)}: ${accepted}. Up to ${formatBytes(MAX_UPLOAD_BYTES)} per file, and up to 15 files or ${formatBytes(MAX_UPLOAD_BYTES)} combined in one batch. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
       },
       {
         question: `What does the ${note.label} output look like?`,

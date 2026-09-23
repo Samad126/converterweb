@@ -85,7 +85,7 @@ export default async function AudioConversionPage({
           <section className="flex flex-col gap-4">
             <h2 className="section-title">What to expect</h2>
             <ul className="fact-list">
-              <li>Files accepted: {entry.source.extension} — up to 500 MB.</li>
+              <li>Files accepted: {entry.source.extension} — up to 100 MB.</li>
               <li>
                 Transcoded with ffmpeg using its default settings for {entry.target.label} — there is
                 no bitrate or quality option to configure.

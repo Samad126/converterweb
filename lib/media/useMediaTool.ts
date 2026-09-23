@@ -23,8 +23,8 @@ import type { PdfFileTool, PdfToolPhase } from "../pdf/usePdfFileTool";
 import type { PdfPart } from "../api/pdfApi";
 import { useTicker } from "../hooks/useTicker";
 
-/** 500 MiB — mirrors the backend's `MEDIA_MAX_UPLOAD_BYTES` default. */
-const MEDIA_MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
+/** 100 MiB — the backend's `MEDIA_MAX_UPLOAD_BYTES`, pinned to the general upload limit. */
+const MEDIA_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 function mediaFileError(file: File, acceptedExtensions: readonly string[]): string | null {
   const extension = extensionOf(file.name);

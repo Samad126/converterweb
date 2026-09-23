@@ -49,7 +49,7 @@ export default function ExtractTablesPage(): React.ReactElement {
       <section className="flex flex-col gap-4">
         <h2 className="section-title">What to expect</h2>
         <ul className="fact-list">
-          <li>Files accepted: .docx and .docm — up to {formatBytes(MAX_UPLOAD_BYTES)} each.</li>
+          <li>Files accepted: .docx and .docm — up to {formatBytes(MAX_UPLOAD_BYTES)}.</li>
           <li>
             This is not a full document export: paragraphs, headings and images outside a table are
             dropped on purpose, so the workbook stays a workbook rather than a document wearing a

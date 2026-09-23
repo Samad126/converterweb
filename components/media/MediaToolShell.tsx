@@ -16,7 +16,7 @@ import { formatBytes, formatDuration } from "@/lib/format";
 import type { PdfFileTool } from "@/lib/pdf/usePdfFileTool";
 import { useServiceHealth } from "@/lib/converter/useServiceHealth";
 
-const MEDIA_MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
+const MEDIA_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export interface MediaToolShellProps {
   tool: PdfFileTool;

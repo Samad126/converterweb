@@ -415,9 +415,9 @@ function describeBlocker(input: {
   if (input.health === "checking") return "Checking that the converter is ready…";
   if (input.health === "unavailable") return "Conversion is paused until the converter answers.";
   if (input.canConvert) {
-    return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} per file. Nothing is saved in this browser.`;
+    return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} in total. Nothing is saved in this browser.`;
   }
   if (!input.hasFiles) return "Choose a file to convert.";
   if (input.selectedTarget === null) return "Choose an output format.";
-  return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} per file. Nothing is saved in this browser.`;
+  return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} in total. Nothing is saved in this browser.`;
 }

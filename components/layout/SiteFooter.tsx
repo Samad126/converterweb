@@ -151,9 +151,12 @@ export function SiteFooter(): React.ReactElement {
 
         <div className="footer-note">
           <p className="meta">
-            Files up to {formatBytes(MAX_UPLOAD_BYTES)}. A conversion that takes
-            longer than {SERVER_TIMEOUT_SECONDS} seconds is stopped by the
-            server; the page gives up at {CLIENT_TIMEOUT_SECONDS}. Files are
+            Files up to {formatBytes(MAX_UPLOAD_BYTES)}, and up to{" "}
+            {formatBytes(MAX_UPLOAD_BYTES)} combined when converting several at
+            once. A document or image conversion that takes longer than{" "}
+            {SERVER_TIMEOUT_SECONDS} seconds is stopped by the server; the page
+            gives up at {CLIENT_TIMEOUT_SECONDS}. Audio and video run as
+            background jobs with a much longer limit. Files are
             converted in a temporary workspace that is deleted before the
             response is sent, and document contents and filenames are never
             logged. No account, no sign-up, nothing stored in this browser.
