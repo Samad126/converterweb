@@ -30,6 +30,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/extract-tables",
     "/tools/psd-to-layers",
     "/about",
+    "/privacy",
+    "/terms",
     ...PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : [])),
   ];
 

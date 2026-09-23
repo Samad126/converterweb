@@ -113,6 +113,12 @@ export function SiteFooter(): React.ReactElement {
               <li>
                 <Link href="/about">About</Link>
               </li>
+              <li>
+                <Link href="/privacy">Privacy policy</Link>
+              </li>
+              <li>
+                <Link href="/terms">Terms of use</Link>
+              </li>
             </ul>
           </nav>
 

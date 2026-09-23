@@ -42,6 +42,7 @@ ${toolLines}
 - [PDF tools](${absoluteUrl("/pdf")}): Merge, split, compress, OCR, sign, redact and more.
 - [Audio conversion](${absoluteUrl("/audio")}) and [video conversion](${absoluteUrl("/video")}): Transcode between common formats.
 - [About](${absoluteUrl("/about")}): Who built this and how it works.
+- [Privacy policy](${absoluteUrl("/privacy")}) and [terms of use](${absoluteUrl("/terms")}).
 `;
 
   return new Response(body, {

@@ -185,11 +185,11 @@ describe("the routes", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
 
     const pdfRoutes = PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : []));
-    // Four hubs, plus /pdf, /tools, its two tools and /about, plus every PDF tool.
+    // Four hubs, plus /pdf, /tools, its two tools, /about and the two legal pages, plus every PDF tool.
     expect(urls).toHaveLength(
-      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + 4 + 5 + pdfRoutes.length,
+      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + 4 + 7 + pdfRoutes.length,
     );
-    for (const route of ["/pdf", "/tools", "/about", ...pdfRoutes]) {
+    for (const route of ["/pdf", "/tools", "/about", "/privacy", "/terms", ...pdfRoutes]) {
       expect(urls).toContain(route);
     }
     for (const slug of SLUGS) {
