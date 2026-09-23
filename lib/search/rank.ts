@@ -40,6 +40,24 @@ function matchesWordBoundary(q: string, text: string): boolean {
   return new RegExp(`(^|[^a-z0-9])${escaped}`).test(text);
 }
 
+/** Words that join a source to a target and say nothing about either. */
+const CONNECTORS: ReadonlySet<string> = new Set(["to", "into", "in", "as", "2", "->", "→"]);
+
+/**
+ * "pptx to pdf" against "PowerPoint to PDF": the whole phrase is in no single
+ * field, but each word is in some field (the extension list holds `pptx`).
+ * Every non-connector word must match a field, and a query that is only
+ * connectors matches nothing.
+ */
+function matchesEveryWord(q: string, fields: readonly string[]): boolean {
+  const words = q.split(/\s+/).filter((word) => word !== "" && !CONNECTORS.has(word));
+  if (words.length < 2) return false;
+  return words.every((word) => {
+    const bare = word.replace(/^\./, "");
+    return fields.some((field) => field === bare || field.startsWith(bare) || matchesWordBoundary(bare, field));
+  });
+}
+
 /** The best (lowest-weight) way `query` matches this one item, or `null`. */
 export function matchItem(query: string, item: SearchItem): MatchRank | null {
   const q = normalizeQuery(query);
@@ -62,6 +80,9 @@ export function matchItem(query: string, item: SearchItem): MatchRank | null {
     return "word-boundary";
   }
   if (textFields.some((field) => field.includes(q))) return "substring";
+  if (matchesEveryWord(q, [label, ...synonyms, ...extensionCandidates, ...idCandidates])) {
+    return "word-boundary";
+  }
   if (isSubsequence(q, label)) return "subsequence";
 
   return null;
