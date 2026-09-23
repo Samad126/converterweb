@@ -14,6 +14,8 @@
  * file's bytes are ever handed back to a renderer, and the attribute is the
  * whole reason that is safe.
  */
+import { useEffect, useRef } from "react";
+
 import type { ConversionResult } from "@/lib/converter/useConverter";
 import { formatBytes, formatDuration } from "@/lib/format";
 
@@ -35,6 +37,11 @@ export function ResultCard({
   onLoadPreview,
   onReset,
 }: ResultCardProps): React.ReactElement {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <section className="panel-strong" aria-labelledby="result-heading">
       <span className="chip-inverse">
@@ -42,7 +49,8 @@ export function ResultCard({
         <span className="eyebrow">Converted</span>
       </span>
 
-      <h2 id="result-heading" className="file-name text-xl font-bold tracking-tight mt-4">
+      <h2 id="result-heading" ref={headingRef} tabIndex={-1} className="file-name text-xl font-bold tracking-tight mt-4">
+        <span className="sr-only">Converted: </span>
         {result.filename}
       </h2>
 

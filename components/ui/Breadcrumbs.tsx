@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbList } from "@/lib/content/schema";
+
 /**
  * The breadcrumb trail, shared by every conversion page and every `/pdf/*`
  * tool page.
@@ -17,6 +20,7 @@ export function Breadcrumbs({
 }): React.ReactElement {
   return (
     <nav aria-label="Breadcrumb" className="mb-6">
+      <JsonLd document={breadcrumbList(crumbs)} />
       <ol className="breadcrumbs">
         {crumbs.map(([name, path], index) => {
           const last = index === crumbs.length - 1;

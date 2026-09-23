@@ -314,22 +314,21 @@ export function StatusPanel(props: StatusPanelProps): React.ReactElement {
               </ul>
             ) : null}
 
-            {files.length < maxFiles ? (
-              <DropZone
-                id={FILE_INPUT_ID}
-                accept={acceptAttribute}
-                acceptedLabel={acceptedExtensions.join(", ")}
-                limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
-                disabled={busy}
-                multiple
-                onSelect={handleFileSelected}
-              />
-            ) : (
+            <DropZone
+              id={FILE_INPUT_ID}
+              accept={acceptAttribute}
+              acceptedLabel={acceptedExtensions.join(", ")}
+              limitLabel={formatBytes(MAX_UPLOAD_BYTES)}
+              disabled={busy || files.length >= maxFiles}
+              multiple
+              onSelect={handleFileSelected}
+            />
+            {files.length >= maxFiles ? (
               <p className="meta">
                 Up to {maxFiles} files at once, {formatBytes(maxTotalBytes)} combined — remove one
                 to add another.
               </p>
-            )}
+            ) : null}
           </section>
 
           {/*
@@ -416,9 +415,9 @@ function describeBlocker(input: {
   if (input.health === "checking") return "Checking that the converter is ready…";
   if (input.health === "unavailable") return "Conversion is paused until the converter answers.";
   if (input.canConvert) {
-    return "Up to 25 MB per file. Nothing is saved in this browser.";
+    return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} per file. Nothing is saved in this browser.`;
   }
   if (!input.hasFiles) return "Choose a file to convert.";
   if (input.selectedTarget === null) return "Choose an output format.";
-  return "Up to 25 MB per file. Nothing is saved in this browser.";
+  return `Up to ${formatBytes(MAX_UPLOAD_BYTES)} per file. Nothing is saved in this browser.`;
 }

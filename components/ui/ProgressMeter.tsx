@@ -11,7 +11,8 @@
  *
  * The timer and the percentage are `aria-hidden`. They change several times a
  * second, and a live region reading them out would be unusable. The phase is
- * announced instead, and `role="progressbar"` carries the real progress to
+ * announced instead, and `role="progressbar"
+        aria-valuetext={percent === null ? undefined : `${percent}%`}` carries the real progress to
  * assistive technology without shouting.
  */
 import { formatBytes, formatDuration } from "@/lib/format";
@@ -36,7 +37,7 @@ export function ProgressMeter({
 
   return (
     <div className="flex flex-col gap-3">
-      <p aria-live="polite" className="sr-only">
+      <p role="status" aria-live="polite" className="sr-only">
         {stage === "uploading" ? "Uploading" : "Converting"}
       </p>
 
@@ -53,6 +54,7 @@ export function ProgressMeter({
       <div
         className="meter"
         role="progressbar"
+        aria-valuetext={percent === null ? undefined : `${percent}%`}
         aria-label={stage === "uploading" ? "Upload progress" : "Conversion progress"}
         {...(percent === null
           ? {}
@@ -65,7 +67,7 @@ export function ProgressMeter({
         />
       </div>
 
-      <p className="meta" aria-hidden="true">
+      <p className="meta">
         {stage === "uploading" && total !== null
           ? `${formatBytes(loaded)} of ${formatBytes(total)}`
           : "The server is converting your file. This can take up to a minute."}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { AUDIO_CATALOG } from "@/lib/media/mediaCatalog";
 import { AUDIO_FORMATS } from "@/lib/media/mediaFormats";
-import { breadcrumbList } from "@/lib/content/schema";
+import { breadcrumbList, pageList } from "@/lib/content/schema";
 
 /**
  * The crawl hub for the 210 `/audio/*` pages — the media equivalent of
@@ -26,6 +26,12 @@ export default function AudioIndexPage(): React.ReactElement {
   return (
     <main id="content" className="shell py-10 sm:py-14">
       <JsonLd document={breadcrumbList(crumbs)} />
+      <JsonLd
+        document={pageList(
+          "Audio conversions",
+          AUDIO_CATALOG.map((entry) => [entry.heading, entry.route] as const),
+        )}
+      />
 
       <nav aria-label="Breadcrumb" className="mb-6">
         <ol className="breadcrumbs">

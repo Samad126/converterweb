@@ -888,6 +888,7 @@
    * system with no colour a text link has nothing else to say.
    */
   .btn-quiet {
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     gap: 6px;

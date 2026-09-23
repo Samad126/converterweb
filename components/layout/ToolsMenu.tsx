@@ -48,13 +48,19 @@ export function ToolsMenu(): React.ReactElement {
   }, [open]);
 
   return (
-    <div className="tools-menu" ref={containerRef}>
+    <div
+      className="tools-menu"
+      ref={containerRef}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         ref={buttonRef}
         className="tools-menu-trigger"
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-controls="tools-panel"
         onClick={() => setOpen((value) => !value)}
       >
         All tools
@@ -66,7 +72,7 @@ export function ToolsMenu(): React.ReactElement {
       </button>
 
       {open ? (
-        <div className="tools-menu-panel" role="menu" aria-label="All tools, by category">
+        <div id="tools-panel" className="tools-menu-panel">
           {CATEGORIES.map((category) => (
             <div key={category.id} className="tools-menu-column">
               <span className="tools-menu-heading">{category.label}</span>
@@ -75,7 +81,6 @@ export function ToolsMenu(): React.ReactElement {
                   <li key={item.id}>
                     <Link
                       href={item.route}
-                      role="menuitem"
                       prefetch={false}
                       onClick={() => setOpen(false)}
                     >
@@ -86,7 +91,6 @@ export function ToolsMenu(): React.ReactElement {
               </ul>
               <Link
                 href={category.seeAllHref}
-                role="menuitem"
                 className="tools-menu-seeall"
                 onClick={() => setOpen(false)}
               >

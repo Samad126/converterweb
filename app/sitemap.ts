@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { SLUGS } from "@/lib/content/catalog";
 import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { PDF_TOOLS } from "@/lib/pdf/pdfTools";
 import { absoluteUrl } from "@/lib/content/site";
 
 /**
@@ -19,7 +20,17 @@ import { absoluteUrl } from "@/lib/content/site";
  * last changed, and there is no cheaper honest value.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  // Bump when content really changes; a per-build date makes every URL look
+  // freshly modified and teaches crawlers to ignore the field.
+  const lastModified = new Date("2026-09-23");
+  const extraRoutes = [
+    "/pdf",
+    "/tools",
+    "/tools/extract-tables",
+    "/tools/psd-to-layers",
+    "/about",
+    ...PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : [])),
+  ];
 
   return [
     {
@@ -52,6 +63,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    ...extraRoutes.map((route) => ({
+      url: absoluteUrl(route),
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     ...AUDIO_CATALOG.map((entry) => ({
       url: absoluteUrl(entry.route),
       lastModified,

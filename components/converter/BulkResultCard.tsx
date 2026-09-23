@@ -12,6 +12,8 @@
  * read out of the ZIP and its `errors.json` in `lib/converter/useConverter.ts`, not
  * fetched again: the archive already is the whole answer.
  */
+import { useEffect, useRef } from "react";
+
 import type { BulkConversionResult } from "@/lib/converter/useConverter";
 import { formatBytes, formatDuration } from "@/lib/format";
 
@@ -23,6 +25,11 @@ export interface BulkResultCardProps {
 }
 
 export function BulkResultCard({ result, onReset }: BulkResultCardProps): React.ReactElement {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   const succeeded = result.outcomes.filter((outcome) => outcome.success).length;
   const failed = result.outcomes.length - succeeded;
 
@@ -33,7 +40,8 @@ export function BulkResultCard({ result, onReset }: BulkResultCardProps): React.
         <span className="eyebrow">Converted</span>
       </span>
 
-      <h2 id="bulk-result-heading" className="file-name text-xl font-bold tracking-tight mt-4">
+      <h2 id="bulk-result-heading" ref={headingRef} tabIndex={-1} className="file-name text-xl font-bold tracking-tight mt-4">
+        <span className="sr-only">Converted: </span>
         {result.zipFilename}
       </h2>
 

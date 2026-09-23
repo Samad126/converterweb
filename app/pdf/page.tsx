@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { CategorySection } from "@/components/ui/CategorySection";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { pageList } from "@/lib/content/schema";
 import { CATEGORIES } from "@/lib/content/categories";
 
 export const metadata: Metadata = {
@@ -23,6 +25,14 @@ const PDF_CATEGORIES = CATEGORIES.filter(
 export default function PdfToolsIndexPage(): React.ReactElement {
   return (
     <main id="content">
+      <JsonLd
+        document={pageList(
+          "PDF tools",
+          PDF_CATEGORIES.flatMap((category) =>
+            category.items.map((item) => [item.label, item.route] as const),
+          ),
+        )}
+      />
       <div className="shell section">
         <h1 className="page-title">PDF tools</h1>
         <p className="page-lede">

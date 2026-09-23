@@ -48,7 +48,8 @@
  * cannot drift between pages. The pair sentence is what stops the pages being
  * duplicates of each other, so it is required, not optional.
  */
-import { ARCHIVE_EXTENSION } from "../constants";
+import { ARCHIVE_EXTENSION, MAX_UPLOAD_BYTES } from "../constants";
+import { formatBytes } from "../format";
 import type { TargetId } from "../api/contract";
 
 /**
@@ -994,12 +995,12 @@ export function composeEntry(
     title: `${heading} — Free Online Converter`,
     // Composed rather than written 36 times, so the promise and the privacy
     // sentence say the same thing on every page. Measured in tests, not by eye.
-    description: `Convert ${source.noun} to ${note.label} free online. ${note.metaNote} No sign-up, up to 25 MB, and no file left on the server.`,
+    description: `Convert ${source.noun} to ${note.label} free online. ${note.metaNote} No sign-up, up to ${formatBytes(MAX_UPLOAD_BYTES)}, no file left on the server.`,
     lede: `Convert ${source.noun} to ${note.label} in the browser: you get ${note.promise}. Nothing to install, no account to make, and the file comes straight back.`,
     cardBlurb: `${CARD_LEADS[target]}.`,
     angle,
     expect: [
-      `Files accepted: ${accepted} — up to 25 MB each.`,
+      `Files accepted: ${accepted} — up to ${formatBytes(MAX_UPLOAD_BYTES)} each.`,
       note.caveat,
       source.blurb,
       ...(others.length > 0
@@ -1013,7 +1014,7 @@ export function composeEntry(
     faqs: [
       {
         question: `Which files can I convert to ${note.label}?`,
-        answer: `${source.noun.charAt(0).toUpperCase()}${source.noun.slice(1)}: ${accepted}. Up to 25 MB each. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
+        answer: `${source.noun.charAt(0).toUpperCase()}${source.noun.slice(1)}: ${accepted}. Up to ${formatBytes(MAX_UPLOAD_BYTES)} each. Anything else is refused before it is uploaded, so a wrong file costs you nothing.`,
       },
       {
         question: `What does the ${note.label} output look like?`,
@@ -1078,7 +1079,7 @@ export const HOME_FAQS: readonly { question: string; answer: string }[] = [
   },
   {
     question: "Is there a file size limit?",
-    answer: `25 MB per file. A conversion still running after 90 seconds is stopped by the server, and the page gives up at 120. Neither limit is a paywall — they are the point at which the service stops being able to answer honestly.`,
+    answer: `${formatBytes(MAX_UPLOAD_BYTES)} per file. A conversion still running after 90 seconds is stopped by the server, and the page gives up at 120. Neither limit is a paywall — they are the point at which the service stops being able to answer honestly.`,
   },
   {
     question: "Does it work on a phone?",

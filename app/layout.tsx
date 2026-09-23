@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     // No `images`: there is no `public/` directory and no generated OG image —
     // see the README. A link preview falls back to the title and description.
   },
-  twitter: { card: "summary" },
+  twitter: { card: "summary_large_image" },
   formatDetection: { telephone: false },
 };
 
@@ -83,7 +83,7 @@ export default function RootLayout({
       <body>
         {/* First in the tab order, and hidden until it is focused. */}
         <a className="skip-link" href="#content">
-          Skip to the converter
+          Skip to main content
         </a>
 
         <GlobalErrorReporter />

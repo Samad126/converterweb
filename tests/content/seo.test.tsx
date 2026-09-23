@@ -10,6 +10,7 @@
  * functions returning JSX. Nothing here needs a server: `render(await Page(...))`
  * is the same tree Next would serialise, minus the flight-data wrapper.
  */
+import { PDF_TOOLS } from "@/lib/pdf/pdfTools";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -183,9 +184,14 @@ describe("the routes", () => {
   it("has a sitemap entry for every page, and nothing that 404s", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
 
+    const pdfRoutes = PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : []));
+    // Four hubs, plus /pdf, /tools, its two tools and /about, plus every PDF tool.
     expect(urls).toHaveLength(
-      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + 4,
+      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + 4 + 5 + pdfRoutes.length,
     );
+    for (const route of ["/pdf", "/tools", "/about", ...pdfRoutes]) {
+      expect(urls).toContain(route);
+    }
     for (const slug of SLUGS) {
       expect(urls).toContain(`/${slug}`);
     }

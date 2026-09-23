@@ -14,12 +14,12 @@ import {
   otherTargetsFor,
 } from "@/lib/content/catalog";
 import {
-  breadcrumbList,
   conversionApplication,
   faqPage,
   howTo,
 } from "@/lib/content/schema";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants";
+import { SITE_NAME } from "@/lib/content/site";
 import { formatBytes } from "@/lib/format";
 
 /**
@@ -66,6 +66,7 @@ export async function generateMetadata({
     alternates: { canonical: `/${entry.slug}` },
     openGraph: {
       type: "website",
+      siteName: SITE_NAME,
       title: entry.title,
       description: entry.description,
       url: `/${entry.slug}`,
@@ -93,7 +94,6 @@ export default async function ConversionPage({
 
   return (
     <main id="content" className="shell py-10 sm:py-14">
-      <JsonLd document={breadcrumbList(crumbs)} />
       <JsonLd document={conversionApplication(entry)} />
       <JsonLd document={howTo(entry)} />
       <JsonLd document={faqPage(entry.faqs)} />
@@ -113,14 +113,14 @@ export default async function ConversionPage({
         {/* The tool, full width, directly under the heading. The `aria-label`
             gives the complementary landmark a name rather than leaving an
             anonymous region on the page. */}
-        <aside aria-label={`Convert ${entry.sourceLabel} to ${entry.targetLabel}`}>
+        <section aria-label={`Convert ${entry.sourceLabel} to ${entry.targetLabel}`}>
           <div className="conversion-aside-inner">
             <ConverterShell
               lockedTargetId={entry.target}
               acceptedExtensions={entry.source.extensions}
             />
           </div>
-        </aside>
+        </section>
 
         {/* The prose. `gap` on this column replaces the per-section top margins
             it used to carry, so the rhythm between blocks is stated once. */}

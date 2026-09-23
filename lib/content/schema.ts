@@ -141,3 +141,19 @@ export function itemList(entries: readonly ConversionEntry[]): JsonLdDocument {
     })),
   };
 }
+
+/** A list of pages by name and path, for the hubs that are not conversion catalogs. */
+export function pageList(name: string, pages: readonly Crumb[]): JsonLdDocument {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name,
+    numberOfItems: pages.length,
+    itemListElement: pages.map(([label, path], index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: label,
+      url: absoluteUrl(path),
+    })),
+  };
+}

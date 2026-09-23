@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { MAX_UPLOAD_BYTES } from "@/lib/constants";
+import { formatBytes } from "@/lib/format";
 import { ConverterShell } from "@/components/converter/ConverterShell";
 
 /**
@@ -52,7 +54,7 @@ export default function PsdToLayersPage(): React.ReactElement {
       <section className="flex flex-col gap-4">
         <h2 className="section-title">What to expect</h2>
         <ul className="fact-list">
-          <li>Files accepted: .psd — up to 25 MB.</li>
+          <li>Files accepted: .psd — up to {formatBytes(MAX_UPLOAD_BYTES)}.</li>
           <li>
             LibreOffice cannot open a PSD, so this is handled entirely by this service&rsquo;s own
             code rather than the export filter every other tool on this site uses.
