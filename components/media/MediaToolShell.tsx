@@ -128,7 +128,6 @@ export function MediaToolShell({ tool, acceptedExtension, onRun }: MediaToolShel
           <ErrorNote
             failure={phase.failure}
             recovery={recoveryFor(phase.failure)}
-            cooldownRemainingMs={0}
             onAction={tool.reset}
           />
         ) : null}

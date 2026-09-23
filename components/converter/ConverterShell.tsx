@@ -162,7 +162,6 @@ function FormatMatrixPlaceholder({
         <ErrorNote
           failure={failure}
           recovery="retry"
-          cooldownRemainingMs={0}
           onAction={onRetry}
         />
       ) : (

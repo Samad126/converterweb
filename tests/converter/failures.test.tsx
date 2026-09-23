@@ -10,7 +10,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_UPLOAD_BYTES, RATE_LIMIT_COOLDOWN_MS } from "@/lib/constants";
+import { BUSY_COOLDOWN_MS, MAX_UPLOAD_BYTES, RATE_LIMIT_COOLDOWN_MS } from "@/lib/constants";
 
 import { BASE, envelope, htmlError } from "../msw/handlers";
 import { MATRIX } from "../msw/matrix";
@@ -191,7 +191,8 @@ describe("each status chooses its own way out", () => {
 
     const alert = await failingConversion();
     expect(alert).toHaveTextContent("This document is too large to convert.");
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    // Retrying the same file would be refused again: the way out is another file.
+    expect(within(alert).getByRole("button", { name: "Choose a different file" })).toBeInTheDocument();
   });
 
   it("415 shows the sentence verbatim and re-renders the picker", async () => {
@@ -245,7 +246,10 @@ describe("each status chooses its own way out", () => {
     );
   });
 
-  it("503 shows the busy sentence and offers another attempt, once", async () => {
+  it("503 shows the busy sentence, waits out a short cooldown, then offers another attempt, once", async () => {
+    const realNow = Date.now;
+    let offset = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => realNow() + offset);
     let attempts = 0;
     server.use(
       http.post(`${BASE}/convert/:target`, () => {
@@ -256,7 +260,13 @@ describe("each status chooses its own way out", () => {
 
     const alert = await failingConversion();
     expect(alert).toHaveTextContent("The converter is busy. Try again in a moment.");
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(within(alert).getByRole("button", { name: /Try again in \d+ s/ })).toBeDisabled();
+    expect(BUSY_COOLDOWN_MS).toBe(10_000);
+
+    offset = BUSY_COOLDOWN_MS + 1_000;
+    await waitFor(() =>
+      expect(within(alert).getByRole("button", { name: "Try again" })).toBeEnabled(),
+    );
 
     // One user-initiated retry, and no third request nobody asked for.
     await waitFor(() => expect(attempts).toBe(1));

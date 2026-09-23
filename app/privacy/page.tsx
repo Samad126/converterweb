@@ -30,7 +30,7 @@ export default function PrivacyPage(): React.ReactElement {
       <section className="mt-12 flex flex-col gap-4">
         <h2 className="section-title">What the server records</h2>
         <ul className="fact-list">
-          <li>One log line per request: a request id, the outcome, the file extension, the target format, the status, the byte size and the duration.</li>
+          <li>One log line per request: a request id, the outcome (<code>ok</code> or <code>error</code>), the file extension, the target format, the HTTP status, an error code when the request failed (such as <code>E_UNSUPPORTED</code> or <code>E_CONVERT_FAILED</code>), the byte size and the duration.</li>
           <li><strong>Document contents and filenames are never logged.</strong></li>
           <li>The service uses your IP address to rate-limit requests. The host and any proxy in front of the site (such as Cloudflare) may also process IP addresses and request metadata in their own logs as part of delivering the site.</li>
         </ul>

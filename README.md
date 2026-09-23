@@ -44,7 +44,7 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run build        # production build
 npm start            # serve the build
-npm run test         # vitest, 290 tests
+npm run test         # vitest, 292 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
 npm run gen:api      # regenerate lib/api/api-types.ts from openapi.json

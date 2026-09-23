@@ -35,11 +35,11 @@ import {
   MAX_CONVERT_FILES,
   MAX_CONVERT_TOTAL_BYTES,
   MAX_UPLOAD_BYTES,
-  RATE_LIMIT_COOLDOWN_MS,
 } from "../constants";
 import type { FormatsResponse, SourceFormat, TargetId } from "../api/contract";
 import {
   type Failure,
+  cooldownMsFor,
   invalidatesMatrix,
   mediaTypeMismatchFailure,
   networkFailure,
@@ -203,7 +203,7 @@ export function useConverter(options?: ConverterOptions): Converter {
   // The running timer. Tenths, so that a page that is working looks like it.
   useTicker(phase.name === "converting", () => setElapsedMs(Date.now() - startedAtRef.current));
 
-  // The `429` countdown, which is ours and not the server's: the response says
+  // The `429`/`503` countdown, which is ours and not the server's: the response says
   // "in a moment" and does not say how long that is.
   useEffect(() => {
     if (cooldownUntil === null) return;
@@ -517,9 +517,10 @@ export function useConverter(options?: ConverterOptions): Converter {
         handleRef.current = null;
         const failure = error instanceof ConversionFailed ? error.failure : networkFailure();
 
-        if (failure.status === 429) {
+        const cooldownMs = cooldownMsFor(failure);
+        if (cooldownMs > 0) {
           setNow(Date.now());
-          setCooldownUntil(Date.now() + RATE_LIMIT_COOLDOWN_MS);
+          setCooldownUntil(Date.now() + cooldownMs);
         }
         // A `404` or a `415` means this build's copy of the matrix disagrees
         // with the server's. Asking again is the only useful response.

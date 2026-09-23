@@ -14,16 +14,40 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-import type { Failure, Recovery } from "@/lib/api/errors";
+import { cooldownMsFor, type Failure, type Recovery } from "@/lib/api/errors";
 import { formatCountdown } from "@/lib/format";
 
 import { CopyIcon } from "./Icons";
 
+/**
+ * Milliseconds left before "Try again" is allowed, counted from when `failure`
+ * first appears. 0 for a failure with nothing to wait for. A note is mounted
+ * once per failure (the tools unmount it on reset), so the clock starts on mount.
+ */
+function useFailureCooldown(failure: Failure): number {
+  const [deadline] = useState(() => Date.now() + cooldownMsFor(failure));
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (Date.now() >= deadline) return;
+    const id = setInterval(() => {
+      setNow(Date.now());
+    }, 250);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  return Math.max(0, deadline - now);
+}
+
 export interface ErrorNoteProps {
   failure: Failure;
   recovery: Recovery;
-  /** Milliseconds left on a `429` cooldown; 0 when there is no cooldown. */
-  cooldownRemainingMs: number;
+  /**
+   * Milliseconds left on a cooldown the caller is tracking; 0 when there is
+   * none. Leave it out and the note counts down by itself from the moment it
+   * appears, which is what the tools that keep no cooldown of their own want.
+   */
+  cooldownRemainingMs?: number;
   /** The single action this state offers. */
   onAction: () => void;
 }
@@ -44,7 +68,9 @@ export function ErrorNote({
   onAction,
 }: ErrorNoteProps): React.ReactElement {
   const [copied, setCopied] = useState(false);
-  const isCoolingDown = cooldownRemainingMs > 0;
+  const ownCooldownMs = useFailureCooldown(failure);
+  const remainingMs = cooldownRemainingMs ?? ownCooldownMs;
+  const isCoolingDown = remainingMs > 0;
 
   useEffect(() => {
     if (!copied) return;
@@ -88,14 +114,16 @@ export function ErrorNote({
           disabled={isCoolingDown}
         >
           {isCoolingDown
-            ? `Try again in ${formatCountdown(cooldownRemainingMs)}`
+            ? `Try again in ${formatCountdown(remainingMs)}`
             : ACTION_LABEL[recovery]}
         </button>
       </div>
 
       {isCoolingDown ? (
         <p className="meta mt-3">
-          The converter is rate limiting this address. Nothing was converted.
+          {failure.status === 503
+            ? "The converter is busy right now. Nothing was converted."
+            : "The converter is rate limiting this address. Nothing was converted."}
         </p>
       ) : null}
     </section>

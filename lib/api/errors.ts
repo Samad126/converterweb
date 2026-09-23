@@ -13,6 +13,7 @@
  *   - `error.code` is never shown. It is carried on the failure for logs, and
  *     no component in this app is given it.
  */
+import { BUSY_COOLDOWN_MS, RATE_LIMIT_COOLDOWN_MS } from "../constants";
 import type { ErrorCode } from "./contract";
 
 export type FailureKind =
@@ -213,11 +214,28 @@ export function recoveryFor(failure: Failure): Recovery {
     case 422:
       // Password protected. Retrying the same file can only fail again.
       return "different-file";
+    case 413:
+      // Over the size limit. The same file will be refused again.
+      return "different-file";
     case 429:
+    case 503:
+      // Rate limited, or the conversion queue is full: both clear on their own.
       return "cooldown";
     default:
       return "retry";
   }
+}
+
+/**
+ * How long "Try again" should stay disabled for this failure, in milliseconds;
+ * 0 when there is nothing to wait for. Ours, not the server's: neither response
+ * says how long "a moment" is.
+ */
+export function cooldownMsFor(failure: Failure): number {
+  if (failure.kind !== "http") return 0;
+  if (failure.status === 429) return RATE_LIMIT_COOLDOWN_MS;
+  if (failure.status === 503) return BUSY_COOLDOWN_MS;
+  return 0;
 }
 
 /**

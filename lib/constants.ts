@@ -34,6 +34,14 @@ export const CLIENT_ABORT_MS = 120_000;
 export const RATE_LIMIT_COOLDOWN_MS = 30_000;
 
 /**
+ * How long "Try again" stays disabled after a `503`: the conversion queue was
+ * full. Shorter than the rate-limit wait, because a slot frees the moment a
+ * running conversion finishes; long enough that pressing the button at once
+ * does not just hit the same full queue.
+ */
+export const BUSY_COOLDOWN_MS = 10_000;
+
+/**
  * The one part name the upload may use, repeated once per file. A request
  * with no part under this name is a `400` — see
  * `components/requestBodies/Upload` in the contract. `/convert/{target}`

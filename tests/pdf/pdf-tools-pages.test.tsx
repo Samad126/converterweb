@@ -4,7 +4,7 @@
  * server error shown verbatim, and at least one option field actually going
  * out on the wire, per tool.
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
@@ -361,6 +361,33 @@ describe("RepairTool", () => {
     await choosePdf(user);
     await user.click(screen.getByRole("button", { name: "Run" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("This PDF could not be repaired.");
+  });
+});
+
+describe("a busy or oversized service, in any PDF tool", () => {
+  it("holds Try again behind a countdown on a 503", async () => {
+    server.use(
+      http.post(`${BASE}/pdf/repair`, () => envelope(503, "E_BUSY", "The converter is busy. Try again in a moment.")),
+    );
+    const user = userEvent.setup();
+    render(<RepairTool />);
+    await choosePdf(user);
+    await user.click(screen.getByRole("button", { name: "Run" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The converter is busy. Try again in a moment.");
+    expect(within(alert).getByRole("button", { name: /Try again in \d+ s/ })).toBeDisabled();
+  });
+
+  it("offers a different file on a 413", async () => {
+    server.use(
+      http.post(`${BASE}/pdf/repair`, () => envelope(413, "E_TOO_LARGE", "This file is too large.")),
+    );
+    const user = userEvent.setup();
+    render(<RepairTool />);
+    await choosePdf(user);
+    await user.click(screen.getByRole("button", { name: "Run" }));
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByRole("button", { name: "Choose a different file" })).toBeEnabled();
   });
 });
 

@@ -150,7 +150,6 @@ export function PdfToolShell({ tool, children, onRun, runDisabled = false }: Pdf
           <ErrorNote
             failure={phase.failure}
             recovery={recoveryFor(phase.failure)}
-            cooldownRemainingMs={0}
             onAction={tool.reset}
           />
         ) : null}

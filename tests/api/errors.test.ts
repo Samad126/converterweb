@@ -124,14 +124,16 @@ describe("choosing the way out", () => {
     expect(at(400)).toBe("retry");
     // The target does not exist: this build's matrix is stale, so start again.
     expect(at(404)).toBe("start-over");
-    expect(at(413)).toBe("retry");
+    // Over the size limit: the same file will be refused again.
+    expect(at(413)).toBe("different-file");
     // A real target this source cannot reach: change the format, keep the file.
     expect(at(415)).toBe("choose-format");
     // A password cannot be guessed by trying again.
     expect(at(422)).toBe("different-file");
     expect(at(429)).toBe("cooldown");
     expect(at(500)).toBe("retry");
-    expect(at(503)).toBe("retry");
+    // The queue is full; it clears by itself, so wait before offering a retry.
+    expect(at(503)).toBe("cooldown");
     expect(at(504)).toBe("retry");
   });
 

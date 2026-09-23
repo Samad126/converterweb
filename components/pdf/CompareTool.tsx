@@ -99,7 +99,6 @@ export function CompareTool(): React.ReactElement {
           <ErrorNote
             failure={phase.failure}
             recovery={recoveryFor(phase.failure)}
-            cooldownRemainingMs={0}
             onAction={tool.reset}
           />
         ) : null}
