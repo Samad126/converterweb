@@ -7,11 +7,11 @@
  */
 
 /**
- * 25 MiB, not 25,000,000. The reverse proxy, the multipart parser and this
+ * 100 MiB, not 100,000,000. The reverse proxy, the multipart parser and this
  * client all apply the same limit, so the check here is a courtesy that saves
  * the upload rather than a rule the server is trusting us to enforce.
  */
-export const MAX_UPLOAD_BYTES = 26_214_400;
+export const MAX_UPLOAD_BYTES = 104_857_600;
 
 /**
  * Our own abort deadline.

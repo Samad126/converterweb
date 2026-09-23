@@ -10,10 +10,10 @@ import {
 
 describe("formatBytes", () => {
   it("uses the units the contract uses, so the two agree", () => {
-    // The limit is 26214400 bytes and the contract calls it 25 MB. If this
-    // said "26.2 MB" the page would contradict the sentence beside it.
-    expect(formatBytes(26_214_400)).toBe("25 MB");
-    expect(formatBytes(26_214_401)).toBe("25 MB");
+    // The limit is 104857600 bytes and the contract calls it 100 MB. If this
+    // said "104.9 MB" the page would contradict the sentence beside it.
+    expect(formatBytes(104_857_600)).toBe("100 MB");
+    expect(formatBytes(104_857_601)).toBe("100 MB");
     expect(formatBytes(0)).toBe("0 B");
     expect(formatBytes(512)).toBe("512 B");
     expect(formatBytes(1024)).toBe("1 KB");

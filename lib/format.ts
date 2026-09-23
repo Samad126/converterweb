@@ -9,7 +9,7 @@ const MIB = 1024 * 1024;
 
 /**
  * Human-readable size, in the same units the contract uses for its own limit
- * ("25 MB"), so that a rejected file and the sentence explaining the limit
+ * ("100 MB"), so that a rejected file and the sentence explaining the limit
  * agree with each other.
  */
 export function formatBytes(bytes: number): string {

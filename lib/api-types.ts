@@ -63,7 +63,7 @@ export interface paths {
          *
          *     This is a separate endpoint from `POST /convert/{target}` on purpose:
          *     a real audio/video transcode routinely runs far longer than that
-         *     endpoint's deadline, and needs an upload ceiling far above the 25MB
+         *     endpoint's deadline, and has the same 100MB upload ceiling
          *     the Android client's wire contract fixes for `/convert`. Nothing
          *     about `/convert/{target}`'s existing contract changes because of this
          *     endpoint.
@@ -1116,7 +1116,7 @@ export interface components {
             };
         };
         /**
-         * @description The upload exceeds 26214400 bytes (25 MB). Applied by the reverse proxy,
+         * @description The upload exceeds 104857600 bytes (100 MB). Applied by the reverse proxy,
          *     by the multipart parser and by the client, all using the same limit.
          *
          *     Also returned when an image target would produce more pages than the
@@ -1420,7 +1420,7 @@ export interface components {
          *     one under any other name is simply not this field and is ignored the
          *     same way any unrecognised part would be.
          *
-         *     Each file is capped at **26214400 bytes (25 MB)**, matching the
+         *     Each file is capped at **104857600 bytes (100 MB)**, matching the
          *     client's own `MAX_UPLOAD_BYTES` and the reverse proxy's body limit -
          *     exceeding it at any layer produces `413`. With more than one file,
          *     their combined size is additionally capped (`MAX_CONVERT_TOTAL_BYTES`,

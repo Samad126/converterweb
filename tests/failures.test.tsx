@@ -296,7 +296,7 @@ describe("each status chooses its own way out", () => {
 });
 
 describe("client-side refusals", () => {
-  it("refuses a file over 25 MiB without spending a request", async () => {
+  it("refuses a file over 100 MiB without spending a request", async () => {
     let attempts = 0;
     server.use(
       http.post(`${BASE}/convert/:target`, () => {
@@ -309,8 +309,8 @@ describe("client-side refusals", () => {
     await chooseFileOfSize(user, "huge.docx", MAX_UPLOAD_BYTES + 1);
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("huge.docx is 25 MB.");
-    expect(alert).toHaveTextContent("The largest file this converter accepts is 25 MB.");
+    expect(alert).toHaveTextContent("huge.docx is 100 MB.");
+    expect(alert).toHaveTextContent("The largest file this converter accepts is 100 MB.");
     expect(within(alert).getByRole("button", { name: "Choose a different file" })).toBeInTheDocument();
 
     // No request at all — not before the refusal, and not after it.
@@ -324,8 +324,8 @@ describe("client-side refusals", () => {
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByText("exactly.docx")).toBeInTheDocument();
-    // 25 MiB, not 25 MB — the number the proxy, the parser and this page share.
-    expect(MAX_UPLOAD_BYTES).toBe(26_214_400);
+    // 100 MiB, not 100 MB — the number the proxy, the parser and this page share.
+    expect(MAX_UPLOAD_BYTES).toBe(104_857_600);
   });
 
   it("refuses an extension the converter does not take, and names the ones it does", async () => {
