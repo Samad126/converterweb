@@ -141,6 +141,9 @@ export function ToolSearchView({
                   // mousedown, not click: fires before the input blurs.
                   event.preventDefault();
                   select(result);
+                  // The query stays in the box, so `open` would keep the list
+                  // up over the page being navigated to.
+                  setDismissed(true);
                 }}
               >
                 {result.item.label}

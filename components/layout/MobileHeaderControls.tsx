@@ -83,7 +83,10 @@ export function MobileHeaderControls(): React.ReactElement {
       {panel === "search" ? (
         <div className="mobile-header-panel mobile-header-panel-search">
           <Suspense fallback={<div className="tool-search-input" aria-hidden="true" />}>
-            <ToolSearch placeholder="Search tools" syncUrlParam={false} autoFocus />
+            <ToolSearch placeholder="Search tools" syncUrlParam={false}
+              autoFocus
+              onNavigate={() => setPanel(null)}
+            />
           </Suspense>
         </div>
       ) : null}

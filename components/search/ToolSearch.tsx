@@ -25,12 +25,15 @@ export interface ToolSearchProps {
   placeholder?: string;
   syncUrlParam?: string | false;
   autoFocus?: boolean;
+  /** Called after a result is chosen, so a host panel can close itself. */
+  onNavigate?: () => void;
 }
 
 export function ToolSearch({
   placeholder,
   syncUrlParam = "q",
   autoFocus = false,
+  onNavigate,
 }: ToolSearchProps): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,7 +44,10 @@ export function ToolSearch({
   const controller = useToolSearchController({
     items: index.status === "ready" ? index.items : null,
     initialQuery,
-    onSelect: (item) => router.push(item.route),
+    onSelect: (item) => {
+      router.push(item.route);
+      onNavigate?.();
+    },
     onQueryChange: syncUrlParam
       ? (query) => {
           const params = new URLSearchParams(Array.from(searchParams.entries()));
