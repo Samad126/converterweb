@@ -46,12 +46,12 @@ const CONNECTORS: ReadonlySet<string> = new Set(["to", "into", "in", "as", "2", 
 /**
  * "pptx to pdf" against "PowerPoint to PDF": the whole phrase is in no single
  * field, but each word is in some field (the extension list holds `pptx`).
- * Every non-connector word must match a field, and a query that is only
+ * Every non-connector word must match a field ("pptx to" is just "pptx"), and a query that is only
  * connectors matches nothing.
  */
 function matchesEveryWord(q: string, fields: readonly string[]): boolean {
   const words = q.split(/\s+/).filter((word) => word !== "" && !CONNECTORS.has(word));
-  if (words.length < 2) return false;
+  if (words.length < 1) return false;
   return words.every((word) => {
     const bare = word.replace(/^\./, "");
     return fields.some((field) => field === bare || field.startsWith(bare) || matchesWordBoundary(bare, field));
