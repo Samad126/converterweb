@@ -38,7 +38,7 @@ interface CategoryInfo {
 
 const CATEGORIES: Readonly<Record<FileCategory, CategoryInfo>> = {
   document: {
-    label: "More documents",
+    label: "Documents",
     noun: "document",
     extensions: [
       ".docx", ".docm", ".doc", ".dot", ".dotx", ".odt", ".ods", ".odg", ".odp", ".xlsx", ".xls",

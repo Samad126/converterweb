@@ -72,7 +72,10 @@ export default function HomePage(): React.ReactElement {
           </p>
           <div className="hero-search mt-6">
             <Suspense fallback={<div className="tool-search-input" aria-hidden="true" />}>
-              <ToolSearch placeholder="Search a format, extension or tool — e.g. “word to pdf”" />
+              <ToolSearch
+                placeholder="Search a format, extension or tool — e.g. “word to pdf”"
+                syncUrlParam={false}
+              />
             </Suspense>
           </div>
           <p className="hero-actions">

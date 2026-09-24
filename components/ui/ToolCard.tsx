@@ -17,7 +17,7 @@
 import Link from "next/link";
 
 import { FormatPair } from "@/components/ui/FormatBadge";
-import type { ConversionEntry } from "@/lib/content/catalog";
+import { shownFamily, type ConversionEntry } from "@/lib/content/catalog";
 
 export function ToolCard({ entry }: { entry: ConversionEntry }): React.ReactElement {
   return (
@@ -25,7 +25,7 @@ export function ToolCard({ entry }: { entry: ConversionEntry }): React.ReactElem
       className="tool-card"
       href={`/${entry.slug}`}
       prefetch={false}
-      data-family={entry.source.family}
+      data-family={shownFamily(entry.source)}
     >
       <FormatPair source={entry.source.badge} target={entry.targetBadge} />
       <span className="tool-card-title">{entry.heading}</span>

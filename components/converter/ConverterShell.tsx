@@ -51,9 +51,15 @@ export function ConverterShell({
 
   const locked = converter.lockedTargetId !== null;
 
+  // Until the format list is here the placeholder owns the errors. The health
+  // probe usually fails first, for the same reason and with the same sentence,
+  // so showing its note meanwhile puts an error at the top that vanishes the
+  // moment the placeholder's own one arrives at the bottom.
+  const formatsPending = converter.formats === null;
+
   return (
     <>
-      {converter.health === "unavailable" && converter.healthFailure !== null ? (
+      {converter.health === "unavailable" && converter.healthFailure !== null && !formatsPending ? (
         <HealthNote
           failure={converter.healthFailure}
           onRetry={converter.recheckHealth}
@@ -64,7 +70,10 @@ export function ConverterShell({
         <FormatMatrixPlaceholder
           isLoading={converter.isLoadingFormats}
           failure={converter.formatsFailure}
-          onRetry={converter.reloadFormats}
+          onRetry={() => {
+            converter.reloadFormats();
+            converter.recheckHealth();
+          }}
           locked={locked}
         />
       ) : (

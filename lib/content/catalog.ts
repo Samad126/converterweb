@@ -1143,6 +1143,15 @@ export function otherSourcesFor(entry: ConversionEntry): readonly ConversionEntr
  * `key` is the grouping key (`"writer"`, `"markup"`), not the family, precisely
  * because the family is `undefined` for one of the groups returned.
  */
+/**
+ * The family a source is listed under. The service reports PDF as a Draw
+ * source (that is how LibreOffice opens it, and the matrix test holds the
+ * catalog to it), but a person looks for it among the documents, not the images.
+ */
+export function shownFamily(source: SourceGroup): Family | undefined {
+  return source.key === "pdf" ? "writer" : source.family;
+}
+
 export function entriesByFamily(): ReadonlyArray<{
   key: string;
   label: string;
@@ -1155,7 +1164,7 @@ export function entriesByFamily(): ReadonlyArray<{
   const grouped = families.map((family) => ({
     key: family as string,
     label: FAMILY_LABELS[family],
-    entries: CATALOG.filter((entry) => entry.source.family === family),
+    entries: CATALOG.filter((entry) => shownFamily(entry.source) === family),
   }));
 
   // The family-less sources (the markup group), one section each, under its own

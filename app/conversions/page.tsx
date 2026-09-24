@@ -36,6 +36,44 @@ const MEDIA_SECTIONS = [
   { key: "video", label: "Video", formats: VIDEO_FORMATS, catalog: VIDEO_CATALOG, hub: "/video" },
 ] as const;
 
+/**
+ * The file catalog's categories, with a category that shares a heading with a
+ * document family ("Documents", "Images") folded into that family's section
+ * rather than listed a second time under the same name.
+ */
+const fileSections = FILE_CATEGORIES.map(({ key, label }) => {
+  const entries = FILE_CATALOG.filter((entry) => entry.category === key);
+  return { key, label, entries, sources: [...new Set(entries.map((entry) => entry.sourceLabel))] };
+}).filter((section) => section.sources.length > 0);
+
+type FileSection = (typeof fileSections)[number];
+
+function FileSources({ section }: { section: FileSection }): React.ReactElement {
+  return (
+    <>
+      {section.sources.map((sourceLabel) => (
+        <div key={sourceLabel} className="mt-6">
+          <h3 className="meta">From {sourceLabel}</h3>
+          <div className="tool-grid mt-3">
+            {section.entries
+              .filter((entry) => entry.sourceLabel === sourceLabel)
+              .map((entry) => (
+                <PairCard
+                  key={entry.slug}
+                  href={entry.route}
+                  source={entry.sourceLabel}
+                  target={entry.targetLabel}
+                  heading={entry.heading}
+                  blurb={`A ${entry.targetLabel} file, ready to download.`}
+                />
+              ))}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function ConversionsPage(): React.ReactElement {
   const families = entriesByFamily();
 
@@ -82,15 +120,22 @@ export default function ConversionsPage(): React.ReactElement {
       </div>
 
       <div className="faq mt-12">
-      {families.map((group) => (
-        <ConversionGroup key={group.key} label={group.label} count={group.entries.length}>
-          <div className="tool-grid">
-            {group.entries.map((entry) => (
-              <ToolCard key={entry.slug} entry={entry} />
+      {families.map((group) => {
+        const files = fileSections.filter((section) => section.label === group.label);
+        const count = group.entries.length + files.reduce((sum, section) => sum + section.entries.length, 0);
+        return (
+          <ConversionGroup key={group.key} label={group.label} count={count}>
+            <div className="tool-grid">
+              {group.entries.map((entry) => (
+                <ToolCard key={entry.slug} entry={entry} />
+              ))}
+            </div>
+            {files.map((section) => (
+              <FileSources key={section.key} section={section} />
             ))}
-          </div>
-        </ConversionGroup>
-      ))}
+          </ConversionGroup>
+        );
+      })}
 
       {MEDIA_SECTIONS.map((section) => (
         <ConversionGroup key={section.key} label={section.label} count={section.catalog.length}>
@@ -120,34 +165,13 @@ export default function ConversionsPage(): React.ReactElement {
           ))}
         </ConversionGroup>
       ))}
-      {FILE_CATEGORIES.map(({ key, label }) => {
-        const entries = FILE_CATALOG.filter((entry) => entry.category === key);
-        const sources = [...new Set(entries.map((entry) => entry.sourceLabel))];
-        if (sources.length === 0) return null;
-        return (
-          <ConversionGroup key={key} label={label} count={entries.length}>
-            {sources.map((sourceLabel) => (
-              <div key={sourceLabel} className="mt-6">
-                <h3 className="meta">From {sourceLabel}</h3>
-                <div className="tool-grid mt-3">
-                  {entries
-                    .filter((entry) => entry.sourceLabel === sourceLabel)
-                    .map((entry) => (
-                      <PairCard
-                        key={entry.slug}
-                        href={entry.route}
-                        source={entry.sourceLabel}
-                        target={entry.targetLabel}
-                        heading={entry.heading}
-                        blurb={`A ${entry.targetLabel} file, ready to download.`}
-                      />
-                    ))}
-                </div>
-              </div>
-            ))}
+      {fileSections
+        .filter((section) => !families.some((group) => group.label === section.label))
+        .map((section) => (
+          <ConversionGroup key={section.key} label={section.label} count={section.entries.length}>
+            <FileSources section={section} />
           </ConversionGroup>
-        );
-      })}
+        ))}
       </div>
     </main>
   );

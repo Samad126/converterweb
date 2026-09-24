@@ -22,7 +22,7 @@
  * CSS at all.
  */
 import { ToolCard } from "@/components/ui/ToolCard";
-import { FAMILY_LABELS, type ConversionEntry, type Family } from "@/lib/content/catalog";
+import { FAMILY_LABELS, shownFamily, type ConversionEntry, type Family } from "@/lib/content/catalog";
 
 export interface ToolGridProps {
   entries: readonly ConversionEntry[];
@@ -37,7 +37,7 @@ export interface ToolGridProps {
 
 export function ToolGrid({ entries, name = "family" }: ToolGridProps): React.ReactElement {
   const families = entries
-    .map((entry) => entry.source.family)
+    .map((entry) => shownFamily(entry.source))
     .filter((family, index, all): family is Family => family !== undefined && all.indexOf(family) === index);
 
   return (

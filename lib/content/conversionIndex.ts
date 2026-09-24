@@ -111,7 +111,59 @@ function buildGroups(): FinderGroup[] {
 
   groups.push(...fileGroups());
 
-  return groups;
+  return mergeSameSources(groups);
+}
+
+/**
+ * The document catalog and the file catalog are separate tables, so a format
+ * both know about (PDF, PNG, JPG) is a source in each. Listed twice it shows up
+ * as two identical rows under different headings — and PDF, which the document
+ * catalog files under "Images" because LibreOffice Draw opens it, is a
+ * document to everyone else. Each label is kept once, in the *last* group that
+ * has it (the file catalog's, whose headings are the plain ones), with the
+ * targets of every copy combined.
+ */
+function mergeSameSources(groups: readonly FinderGroup[]): FinderGroup[] {
+  const homeOf = new Map<string, number>();
+  groups.forEach((group, index) => {
+    for (const source of group.sources) homeOf.set(source.label.toLowerCase(), index);
+  });
+
+  const combined = new Map<string, FinderSource>();
+  for (const group of groups) {
+    for (const source of group.sources) {
+      const id = source.label.toLowerCase();
+      const seen = combined.get(id);
+      if (!seen) {
+        combined.set(id, source);
+        continue;
+      }
+      const hrefs = new Set(seen.targets.map((target) => target.href));
+      combined.set(id, {
+        ...source,
+        searchTerms: [...new Set([...seen.searchTerms, ...source.searchTerms])],
+        targets: [...seen.targets, ...source.targets.filter((target) => !hrefs.has(target.href))],
+      });
+    }
+  }
+
+  const kept = groups
+    .map((group, index) => ({
+      ...group,
+      sources: group.sources
+        .filter((source) => homeOf.get(source.label.toLowerCase()) === index)
+        .map((source) => combined.get(source.label.toLowerCase()) ?? source),
+    }))
+    .filter((group) => group.sources.length > 0);
+
+  // "Images" exists twice (the document catalog's Draw family and the file
+  // catalog's category); one heading, at the first one's position.
+  const byLabel = new Map<string, FinderGroup>();
+  for (const group of kept) {
+    const first = byLabel.get(group.label);
+    byLabel.set(group.label, first ? { ...first, sources: [...first.sources, ...group.sources] } : group);
+  }
+  return [...byLabel.values()];
 }
 
 export const FINDER_GROUPS: readonly FinderGroup[] = buildGroups();
