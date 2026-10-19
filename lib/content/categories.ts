@@ -16,6 +16,8 @@ import { EXTRA_TOOLS, POPULAR } from "./catalog";
 import { TOTAL_CONVERSIONS } from "./conversionIndex";
 import { PDF_TOOLS } from "../pdf/pdfTools";
 import { POPULAR_AUDIO, POPULAR_VIDEO } from "../media/mediaCatalog";
+import { youtubeEntryFor } from "../media/youtubeCatalog";
+import type { YouTubeTargetId } from "../api/contract";
 
 export interface CategoryItem {
   id: string;
@@ -37,6 +39,15 @@ function pdfTool(id: string): CategoryItem {
   const tool = PDF_TOOLS.find((t) => t.id === id);
   if (!tool || !tool.route) throw new Error(`categories: unknown or routeless PDF tool "${id}"`);
   return { id: tool.id, label: tool.label, blurb: tool.blurb, route: tool.route };
+}
+
+/**
+ * The YouTube page for one target, listed under the media category it makes a
+ * file for. A YouTube link is a way to get audio or video, so it sits with them.
+ */
+function youtubeItem(targetId: YouTubeTargetId): CategoryItem {
+  const entry = youtubeEntryFor(targetId);
+  return { id: entry.slug, label: entry.heading, blurb: `Paste a YouTube link and get ${entry.output}.`, route: entry.route };
 }
 
 const MERGE_ORGANIZE_IDS = [
@@ -122,12 +133,15 @@ export const CATEGORIES: readonly Category[] = [
     lede: "Convert between MP3, WAV, FLAC, M4A and other audio formats.",
     seeAllHref: "/conversions",
     seeAllLabel: `All ${TOTAL_CONVERSIONS} conversions`,
-    items: POPULAR_AUDIO.map((entry) => ({
-      id: entry.slug,
-      label: entry.heading,
-      blurb: `A ${entry.target.label} file, converted in the background.`,
-      route: entry.route,
-    })),
+    items: [
+      ...POPULAR_AUDIO.map((entry) => ({
+        id: entry.slug,
+        label: entry.heading,
+        blurb: `A ${entry.target.label} file, converted in the background.`,
+        route: entry.route,
+      })),
+      youtubeItem("mp3"),
+    ],
   },
   {
     id: "video",
@@ -135,12 +149,15 @@ export const CATEGORIES: readonly Category[] = [
     lede: "Convert between MP4, WEBM, MKV, MOV and other video formats.",
     seeAllHref: "/conversions",
     seeAllLabel: `All ${TOTAL_CONVERSIONS} conversions`,
-    items: POPULAR_VIDEO.map((entry) => ({
-      id: entry.slug,
-      label: entry.heading,
-      blurb: `A ${entry.target.label} file, converted in the background.`,
-      route: entry.route,
-    })),
+    items: [
+      ...POPULAR_VIDEO.map((entry) => ({
+        id: entry.slug,
+        label: entry.heading,
+        blurb: `A ${entry.target.label} file, converted in the background.`,
+        route: entry.route,
+      })),
+      youtubeItem("mp4"),
+    ],
   },
 ];
 

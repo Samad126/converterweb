@@ -23,7 +23,7 @@ export default function PrivacyPage(): React.ReactElement {
       <section className="mt-12 flex flex-col gap-4">
         <h2 className="section-title">Your files</h2>
         <p className="body-text">
-          When you convert a file, it is uploaded to the conversion service, converted in a temporary workspace, and the result is sent back to you. The workspace is deleted when the request ends — on success, on failure, on timeout, and if you close the page mid-conversion. Audio and video are transcoded as a background job, so their workspace lives until that job finishes and is then deleted. Files are not read by a person, not used to train anything, not sold and not shared.
+          When you convert a file, it is uploaded to the conversion service, converted in a temporary workspace, and the result is sent back to you. The workspace is deleted when the request ends — on success, on failure, on timeout, and if you close the page mid-conversion. Audio and video are transcoded as a background job, so their workspace lives until that job finishes and is then deleted. For a YouTube link, the service downloads the video from YouTube instead of receiving an upload, and the same workspace rules apply. Files are not read by a person, not used to train anything, not sold and not shared.
         </p>
       </section>
 

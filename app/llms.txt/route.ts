@@ -1,5 +1,6 @@
 import { CATALOG, EXTRA_TOOLS } from "@/lib/content/catalog";
 import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
+import { YOUTUBE_CONVERSIONS } from "@/lib/media/youtubeCatalog";
 
 /**
  * the llms-dot-txt file — a plain-text index for AI assistants and answer engines,
@@ -41,6 +42,7 @@ ${toolLines}
 - [All conversions](${absoluteUrl("/conversions")}): The full catalog of conversion pages — documents, images, archives, data, subtitles, e-books, fonts, 3D models and email, plus the audio and video hubs — grouped by format.
 - [PDF tools](${absoluteUrl("/pdf")}): Merge, split, compress, OCR, sign, redact and more.
 - [Audio conversion](${absoluteUrl("/audio")}) and [video conversion](${absoluteUrl("/video")}): Transcode between common formats.
+- ${YOUTUBE_CONVERSIONS.map((entry) => `[${entry.heading}](${absoluteUrl(entry.route)})`).join(" and ")}: Paste a YouTube video link and get its audio as MP3, or the video as MP4.
 - [About](${absoluteUrl("/about")}): Who built this and how it works.
 - [Privacy policy](${absoluteUrl("/privacy")}) and [terms of use](${absoluteUrl("/terms")}).
 `;

@@ -31,6 +31,7 @@ import type { FormatsResponse } from "../api/contract";
 import { FILE_CATALOG } from "../files/fileCatalog";
 import { findTarget, normalizeMediaType } from "../converter/formats";
 import { MEDIA_CATALOG } from "../media/mediaCatalog";
+import { YOUTUBE_CONVERSIONS } from "../media/youtubeCatalog";
 import { PDF_TOOLS } from "../pdf/pdfTools";
 import { synonymsFor } from "./aliases";
 import type { SearchItem } from "./types";
@@ -112,6 +113,20 @@ export function buildSearchIndex(formats: FormatsResponse): SearchItem[] {
       extensions: lower([entry.source.extension, entry.target.extension]),
       mimeTypes: [normalizeMediaType(entry.target.mediaType)],
       synonyms: synonymsFor([entry.source.id, entry.target.id, entry.kind]),
+    });
+  }
+
+  // The YouTube pages take a link, not a file, so they have no source extension
+  // to match. `yt` is the word people type for them, and it is not a format.
+  for (const entry of YOUTUBE_CONVERSIONS) {
+    items.push({
+      id: `youtube:${entry.slug}`,
+      kind: "media",
+      label: entry.heading,
+      route: entry.route,
+      extensions: lower([entry.target.extension]),
+      mimeTypes: [normalizeMediaType(entry.target.mediaType)],
+      synonyms: ["yt", "youtube", "link", ...synonymsFor([entry.target.id])],
     });
   }
 

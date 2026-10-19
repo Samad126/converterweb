@@ -194,7 +194,13 @@ export function unreadableResponseFailure(status: number, requestId: string | nu
 }
 
 /** What the user can do about a failure. One primary action per state. */
-export type Recovery = "retry" | "different-file" | "cooldown" | "choose-format" | "start-over";
+export type Recovery =
+  | "retry"
+  | "different-file"
+  | "different-link"
+  | "cooldown"
+  | "choose-format"
+  | "start-over";
 
 /**
  * Status → the single action the failure state offers.
@@ -229,6 +235,24 @@ export function recoveryFor(failure: Failure): Recovery {
     default:
       return "retry";
   }
+}
+
+/**
+ * The action for a failure of a YouTube link, where "try again" can only fail again.
+ *
+ * The same link is refused every time for a private, removed or blocked video,
+ * for a video over the size limit, and for a body the service cannot read as a
+ * link. So those offer a different link. Everything else (a busy queue, a rate
+ * limit, a dropped connection) keeps the file rules, which already know what
+ * clears on its own.
+ *
+ * The job's own failure answers `200` on the status endpoint, so it is told
+ * apart by `error.code`, not by status.
+ */
+export function recoveryForLink(failure: Failure): Recovery {
+  if (failure.code === "E_VIDEO_UNAVAILABLE" || failure.code === "E_TOO_LARGE") return "different-link";
+  if (failure.kind === "http" && failure.status === 400) return "different-link";
+  return recoveryFor(failure);
 }
 
 /**

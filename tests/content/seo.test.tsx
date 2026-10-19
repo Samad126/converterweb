@@ -24,6 +24,7 @@ import HomePage from "@/app/page";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { CATALOG, SLUGS } from "@/lib/content/catalog";
 import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { YOUTUBE_CONVERSIONS } from "@/lib/media/youtubeCatalog";
 import sitemap from "@/app/sitemap";
 
 /** Render `/word_to_pdf` the way Next would, and give back the element tree. */
@@ -188,7 +189,14 @@ describe("the routes", () => {
     const pdfRoutes = PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : []));
     // Four hubs, plus /pdf, /tools, its two tools, /about and the two legal pages, plus every PDF tool.
     expect(urls).toHaveLength(
-      SLUGS.length + AUDIO_CATALOG.length + VIDEO_CATALOG.length + FILE_CATALOG.length + 4 + 7 + pdfRoutes.length,
+      SLUGS.length +
+        AUDIO_CATALOG.length +
+        VIDEO_CATALOG.length +
+        YOUTUBE_CONVERSIONS.length +
+        FILE_CATALOG.length +
+        4 +
+        7 +
+        pdfRoutes.length,
     );
     for (const route of ["/pdf", "/tools", "/about", "/privacy", "/terms", ...pdfRoutes]) {
       expect(urls).toContain(route);
@@ -200,6 +208,9 @@ describe("the routes", () => {
       expect(urls).toContain(entry.route);
     }
     for (const entry of VIDEO_CATALOG) {
+      expect(urls).toContain(entry.route);
+    }
+    for (const entry of YOUTUBE_CONVERSIONS) {
       expect(urls).toContain(entry.route);
     }
     expect(urls).toContain("/");

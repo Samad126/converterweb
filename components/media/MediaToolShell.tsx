@@ -1,31 +1,35 @@
 "use client";
 
 /**
- * The upload → run → result flow for one `/audio/*` or `/video/*` page —
- * `components/pdf/PdfToolShell.tsx`'s media cousin. Not the same component,
- * because that one hardcodes `.pdf` and the 25 MB document limit into its
- * `DropZone`; this tool accepts one media extension at a time and a 500 MB
- * limit, so those have to be props instead of constants.
+ * The run → result flow for one `/audio/*`, `/video/*` or YouTube page — the
+ * part every media page shares, whatever it was given to convert.
+ *
+ * Step one is the caller's: a file drop zone for an upload, a link field for a
+ * YouTube video. Everything from the button down is this component, so a
+ * result, a failure and a service that is not answering look the same on
+ * every media page, and a page cannot drift from the others by accident.
  */
-import { DropZone } from "@/components/ui/DropZone";
+import type { ReactNode } from "react";
+
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { HealthNote } from "@/components/converter/HealthNote";
 import { CheckIcon, DownloadIcon } from "@/components/ui/Icons";
-import { recoveryFor } from "@/lib/api/errors";
+import { type Failure, type Recovery, recoveryFor } from "@/lib/api/errors";
 import { formatBytes, formatDuration } from "@/lib/format";
-import type { PdfFileTool } from "@/lib/pdf/usePdfFileTool";
+import type { MediaRun } from "@/lib/media/useMediaJob";
 import { useServiceHealth } from "@/lib/converter/useServiceHealth";
 
-const MEDIA_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-
 export interface MediaToolShellProps {
-  tool: PdfFileTool;
-  /** The single extension this page accepts, dot-prefixed: `.mp3`. */
-  acceptedExtension: string;
+  /** What this page is showing, and whether Convert may be pressed for the input it holds. */
+  tool: MediaRun & { canRun: boolean };
   onRun: () => void;
+  /** The one action a failure offers. The file rules, unless a page knows better. */
+  recoveryOf?: (failure: Failure) => Recovery;
+  /** Step one: the page's own input. */
+  children: ReactNode;
 }
 
-export function MediaToolShell({ tool, acceptedExtension, onRun }: MediaToolShellProps): React.ReactElement {
+export function MediaToolShell({ tool, onRun, recoveryOf = recoveryFor, children }: MediaToolShellProps): React.ReactElement {
   const { phase } = tool;
   const { health, healthFailure, recheckHealth } = useServiceHealth();
 
@@ -53,60 +57,36 @@ export function MediaToolShell({ tool, acceptedExtension, onRun }: MediaToolShel
     );
   }
 
+  const runnable = tool.canRun && health === "ready";
+
   return (
     <>
       {health === "unavailable" && healthFailure !== null ? (
         <HealthNote failure={healthFailure} onRetry={recheckHealth} />
       ) : null}
 
-      <div className="flex flex-col gap-8">
-        <section className="flex flex-col gap-3">
-          <h2 className="step-heading">
-            <span className="step-number">1</span> Choose a {acceptedExtension} file
-          </h2>
-
-          {tool.file ? (
-            <div className="chosen-file">
-              <span className="file-name">{tool.file.name}</span>
-              <span className="meta">{formatBytes(tool.file.size)}</span>
-              <button
-                type="button"
-                className="btn-quiet"
-                onClick={tool.clearFile}
-                disabled={phase.name === "running"}
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <DropZone
-              id="media-tool-file"
-              accept={acceptedExtension}
-              acceptedLabel={acceptedExtension}
-              limitLabel={formatBytes(MEDIA_MAX_UPLOAD_BYTES)}
-              disabled={phase.name === "running"}
-              onSelect={tool.selectFile}
-            />
-          )}
-
-          {tool.fileError ? (
-            <ul className="flex flex-col gap-1" role="alert">
-              <li className="notice">{tool.fileError}</li>
-            </ul>
-          ) : null}
-        </section>
+      {/*
+       * A form so that Enter in a text field runs the conversion, as it does
+       * in every other form on the site. The button is the same gate either
+       * way: a disabled submit button does not submit, so Enter cannot start a
+       * run the button would refuse.
+       */}
+      <form
+        className="flex flex-col gap-8"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (runnable) onRun();
+        }}
+      >
+        {children}
 
         <section className="flex flex-col gap-3">
           <h2 className="step-heading">
             <span className="step-number">2</span> Convert
           </h2>
 
-          <button
-            type="button"
-            className="btn"
-            onClick={onRun}
-            disabled={!tool.canRun || health !== "ready"}
-          >
+          <button type="submit" className="btn" disabled={!runnable}>
             {phase.name === "running"
               ? phase.stage === "uploading"
                 ? "Uploading…"
@@ -125,13 +105,9 @@ export function MediaToolShell({ tool, acceptedExtension, onRun }: MediaToolShel
         </section>
 
         {phase.name === "failed" ? (
-          <ErrorNote
-            failure={phase.failure}
-            recovery={recoveryFor(phase.failure)}
-            onAction={tool.reset}
-          />
+          <ErrorNote failure={phase.failure} recovery={recoveryOf(phase.failure)} onAction={tool.reset} />
         ) : null}
-      </div>
+      </form>
     </>
   );
 }

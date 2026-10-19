@@ -40,3 +40,6 @@ export type HealthResponse =
 /** The declared error body of a conversion endpoint, for MSW fixtures and tests. */
 export type ConvertErrorResponse =
   paths["/convert/{target}"]["post"]["responses"][400]["content"]["application/json"];
+
+/** What a YouTube job produces: `mp4` for the video, `mp3` for its audio track. */
+export type YouTubeTargetId = paths["/youtube/{target}"]["post"]["parameters"]["path"]["target"];

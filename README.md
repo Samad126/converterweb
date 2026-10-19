@@ -16,6 +16,7 @@ own family of dedicated, single-purpose pages:
 | `/conversions` | The full document-conversion index, grouped by family |
 | `/audio`, `/audio/{source}_to_{target}` | The audio hub and its 210 conversion pages, e.g. `/audio/mp3_to_wav` |
 | `/video`, `/video/{source}_to_{target}` | The video hub and its 156 conversion pages, e.g. `/video/mp4_to_webm` |
+| `/youtube-to-mp3`, `/youtube-to-mp4` | Paste a YouTube link, get its audio as MP3 or the video as MP4. Two pages, each locked to one target, from `lib/media/youtubeCatalog.ts` |
 | `/pdf`, `/pdf/{tool}` | The PDF-tools hub and its 20 tool pages (merge, split, OCR, sign, redact, compare, and more) — these act on a PDF, they do not convert a format |
 | `/tools`, `/tools/{tool}` | The two extraction tools that fit neither matrix: `extract-tables` (Word) and `psd-to-layers` (PSD) |
 | `/about` | Who built it and how the two repositories (this client, and the conversion service) fit together |
@@ -26,8 +27,9 @@ conversion: the format is fixed, the file input accepts only the extensions that
 page is for, and there is no format picker to distract from the one job. There is
 no separate "convert anything" page either — `/convert`, which the single-page
 version of this app served at `/`, is gone. The audio and video pages work the
-same way but submit to async media jobs rather than a synchronous response; the
-PDF tool pages don't pick a target at all, since the tool itself *is* the
+same way but submit to async media jobs rather than a synchronous response. The
+YouTube pages take a link rather than a file and start the same kind of job, so
+they share its status and download; the PDF tool pages don't pick a target at all, since the tool itself *is* the
 operation.
 
 The service is consumed by an already-shipped Android client, so its behaviour
@@ -44,7 +46,7 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run build        # production build
 npm start            # serve the build
-npm run test         # vitest, 292 tests
+npm run test         # vitest, 322 tests
 npm run lint         # eslint
 npm run typecheck    # tsc --noEmit, strict
 npm run gen:api      # regenerate lib/api/api-types.ts from openapi.json
@@ -317,6 +319,8 @@ Two consequences worth knowing:
 | 104857600 bytes (100 MiB), checked before the request | `lib/constants.ts` (`MAX_UPLOAD_BYTES`), `lib/converter/useConverter.ts` (`selectFile`) |
 | The client gives up at 120 s, after the server's 90 s | `lib/constants.ts` (`CLIENT_ABORT_MS`) |
 | `X-Request-Id` shown under an error with a copy button | `components/ui/ErrorNote.tsx` |
+| A YouTube link is sent as typed, never fetched by the page; the service reads the video id | `lib/api/mediaApi.ts` (`startYouTubeJob`), `lib/media/useYouTubeTool.ts` |
+| A failed YouTube job is recovered by `error.code`, because the status endpoint answers `200` for it | `lib/api/errors.ts` (`recoveryForLink`), `tests/api/youtube-recovery.test.ts` |
 | Unauthenticated; no keys, tokens or login | nowhere, deliberately |
 
 ## Decisions where the contract left room
@@ -476,6 +480,7 @@ Two other decisions on that page are worth knowing:
 ```
 tests/api/contentDisposition.test.ts        the two RFC 6266 forms, decoding, sanitising
 tests/api/errors.test.ts                    the envelope, our sentences, status → recovery
+tests/api/youtube-recovery.test.ts          which action a YouTube link's failure offers, by error.code
 tests/api/transport.test.ts                 the real multipart bytes, abort, the 120 s deadline
 tests/api/transport/                        fixtures for the above (a real server on an ephemeral port)
 tests/content/catalog.test.tsx              the catalog against the matrix, both directions
@@ -493,6 +498,9 @@ tests/converter/preview.test.ts             escaping and the preview document
 tests/converter/progress.test.tsx           the two phases of the meter
 tests/converter/service.test.tsx            health, the phases, cancel, timeout, loading
 tests/converter/zip.test.ts                 building/reading the archive responses client-side
+tests/media/media-tool.test.tsx             the audio/video file tool, end to end against MSW
+tests/media/youtube.test.tsx                the YouTube tool: the link sent, the job polled, every failure's recovery
+tests/media/youtube-catalog.test.ts         the two /youtube-to-* pages and their copy
 tests/pdf/pdf-form-fields-compare.test.tsx  form-field detection and PDF diffing
 tests/pdf/pdf-multi-tools.test.tsx          merge, split, organize and the other multi-file PDF tools
 tests/pdf/pdf-sign-redact-edit.test.tsx     sign, redact and edit tool behaviour
@@ -501,6 +509,7 @@ tests/pdf/pdf-tools.test.tsx                the shared PDF-tool plumbing (lib/pd
 tests/pdf/pdfCoords.test.ts                 page-space ↔ screen-space coordinate math for PDF editing
 tests/search/search-ui.test.tsx             the search box's own behaviour
 tests/search/search.test.ts                 the search index built from every catalog
+tests/search/youtube-search.test.ts         yt and youtube find the YouTube pages
 ```
 
 Two things are tested outside MSW, and both for the same reason — MSW's XHR

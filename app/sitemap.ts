@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { SLUGS } from "@/lib/content/catalog";
 import { AUDIO_CATALOG, VIDEO_CATALOG } from "@/lib/media/mediaCatalog";
+import { YOUTUBE_CONVERSIONS } from "@/lib/media/youtubeCatalog";
 import { FILE_CATALOG } from "@/lib/files/fileCatalog";
 import { PDF_TOOLS } from "@/lib/pdf/pdfTools";
 import { absoluteUrl } from "@/lib/content/site";
@@ -90,6 +91,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.7,
+    })),
+    ...YOUTUBE_CONVERSIONS.map((entry) => ({
+      url: absoluteUrl(entry.route),
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     })),
   ];
 }

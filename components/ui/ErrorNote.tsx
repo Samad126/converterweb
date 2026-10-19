@@ -55,6 +55,7 @@ export interface ErrorNoteProps {
 const ACTION_LABEL: Record<Recovery, string> = {
   retry: "Try again",
   "different-file": "Choose a different file",
+  "different-link": "Try a different link",
   "choose-format": "Choose another format",
   "start-over": "Start over",
   // Only ever reached with the button disabled; the label is the countdown.

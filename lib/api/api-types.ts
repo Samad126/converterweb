@@ -63,9 +63,11 @@ export interface paths {
          *
          *     This is a separate endpoint from `POST /convert/{target}` on purpose:
          *     a real audio/video transcode routinely runs far longer than that
-         *     endpoint's deadline, and has the same 100MB upload ceiling
-         *     the Android client's wire contract fixes for `/convert`. Nothing
-         *     about `/convert/{target}`'s existing contract changes because of this
+         *     endpoint's deadline. Its upload ceiling is the same 100MB
+         *     `/convert` enforces - both are capped there by Cloudflare's own edge
+         *     limit on a proxied request body, so raising this endpoint's ceiling
+         *     above it would be dead configuration. Nothing about
+         *     `/convert/{target}`'s existing contract changes because of this
          *     endpoint.
          *
          *     `target` and the source extension must be the same KIND (audio to
@@ -122,6 +124,45 @@ export interface paths {
         get: operations["downloadMediaJobResult"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/youtube/{target}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a job that downloads a YouTube video as MP4 or MP3
+         * @description Takes a YouTube video link as JSON and starts a background job that
+         *     downloads the video and produces `target` - `mp4` for the video itself,
+         *     or `mp3` for its audio track. It answers `202` with a job id as soon as
+         *     the link is validated and does NOT wait for the download.
+         *
+         *     The job is then polled and downloaded through the SAME
+         *     `GET /media/jobs/{id}` and `GET /media/jobs/{id}/download` endpoints a
+         *     `POST /media/{target}` upload uses, and it shares that endpoint family's
+         *     one concurrency pool.
+         *
+         *     Only `youtube.com`, `www.youtube.com`, `m.youtube.com`,
+         *     `music.youtube.com` and `youtu.be` links are accepted, including the
+         *     `/shorts/`, `/embed/` and `/live/` paths. A link is reduced to the one
+         *     video it names: a playlist or a timestamp in it is ignored.
+         *
+         *     A video that may not be fetched - private, removed, age-restricted,
+         *     members-only, or blocked in this country - and a live stream that has
+         *     not ended both fail the job with `E_VIDEO_UNAVAILABLE`. A video larger
+         *     than `YOUTUBE_MAX_FILESIZE_BYTES` (200MB by default) fails with
+         *     `E_TOO_LARGE`. The downloaded file is named after the video's title.
+         */
+        post: operations["convertYouTubeToFormat"];
         delete?: never;
         options?: never;
         head?: never;
@@ -861,7 +902,7 @@ export interface components {
          *     and returned by `GET /formats`.
          * @enum {string}
          */
-        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg" | "tables" | "layers" | "pdfa" | "markdown" | "zip" | "tar" | "tar.gz" | "tar.bz2" | "7z" | "cbz" | "srt" | "vtt" | "ass" | "ssa" | "tsv" | "json" | "yaml" | "jsonl" | "bmp" | "gif" | "tiff" | "webp" | "avif" | "ico" | "png-image" | "jpg-image";
+        TargetId: "pdf" | "odt" | "docx" | "txt" | "html" | "rtf" | "epub" | "ods" | "xlsx" | "csv" | "odp" | "pptx" | "png" | "jpg" | "tables" | "layers" | "pdfa" | "markdown" | "zip" | "tar" | "tar.gz" | "tar.bz2" | "7z" | "cbz" | "srt" | "vtt" | "ass" | "ssa" | "tsv" | "json" | "yaml" | "jsonl" | "bmp" | "gif" | "tiff" | "webp" | "avif" | "ico" | "png-image" | "jpg-image" | "svg" | "heic" | "heif" | "emf" | "wmf" | "eps" | "jxl" | "jp2" | "qoi" | "tga" | "pcx" | "apng" | "xml" | "toml" | "ini" | "sqlite" | "tar.zst" | "obj" | "stl" | "ply" | "glb" | "3mf" | "mobi" | "azw3" | "fb2" | "lrf" | "pdb" | "snb" | "kepub" | "ttf" | "otf" | "woff" | "woff2" | "parquet" | "orc" | "feather";
         /**
          * @description Identifier of an audio/video output format, as used in the
          *     `/media/{target}` path - a separate id space from `TargetId`, since
@@ -878,6 +919,14 @@ export interface components {
             status: components["schemas"]["MediaJobStatusValue"];
             /** @description Always `/media/jobs/{id}`, given back so a client does not have to build it itself. */
             statusUrl: string;
+        };
+        YouTubeRequest: {
+            /**
+             * @description A YouTube video link - `youtube.com/watch?v=`, `youtu.be/`, or the
+             *     `/shorts/`, `/embed/` or `/live/` form. Anything else is refused.
+             * @example https://www.youtube.com/watch?v=jNQXAC9IVRw
+             */
+            url: string;
         };
         MediaJobStatus: {
             id: string;
@@ -902,7 +951,7 @@ export interface components {
          *     and support only - the client never shows this to the user.
          * @enum {string}
          */
-        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_NO_TABLES" | "E_NO_LAYERS" | "E_NOT_TABULAR" | "E_BAD_PAGE_RANGE" | "E_TOO_FEW_FILES" | "E_WRONG_PASSWORD" | "E_INVALID_FIELD" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL" | "E_JOB_NOT_FOUND" | "E_JOB_NOT_READY";
+        ErrorCode: "E_CONVERT_FAILED" | "E_TIMEOUT" | "E_ENCRYPTED" | "E_UNSUPPORTED" | "E_UNSUPPORTED_TARGET" | "E_UNKNOWN_TARGET" | "E_TOO_LARGE" | "E_NO_TABLES" | "E_NO_LAYERS" | "E_NOT_TABULAR" | "E_BAD_PAGE_RANGE" | "E_TOO_FEW_FILES" | "E_WRONG_PASSWORD" | "E_INVALID_FIELD" | "E_BUSY" | "E_BAD_REQUEST" | "E_RATE_LIMITED" | "E_INTERNAL" | "E_JOB_NOT_FOUND" | "E_JOB_NOT_READY" | "E_VIDEO_UNAVAILABLE";
         /**
          * @description The body of every non-2xx response. There are no exceptions: error
          *     paths that Express or multer would normally render as an HTML page are
@@ -1108,7 +1157,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNKNOWN_TARGET",
-                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG, XLSX (tables), PNG (layers), PDF/A, Markdown, ZIP, TAR, TAR.GZ, TAR.BZ2, 7Z, CBZ, SRT, VTT, ASS, SSA, TSV, JSON, YAML, JSONL, BMP, GIF, TIFF, WEBP, AVIF, ICO, PNG (image), JPG (image)."
+                 *         "message": "That is not a format this converter can produce. Available: PDF, ODT, DOCX, TXT, HTML, RTF, EPUB, ODS, XLSX, CSV, ODP, PPTX, PNG, JPG, XLSX (tables), PNG (layers), PDF/A, Markdown, ZIP, TAR, TAR.GZ, TAR.BZ2, 7Z, CBZ, SRT, VTT, ASS, SSA, TSV, JSON, YAML, JSONL, BMP, GIF, TIFF, WEBP, AVIF, ICO, PNG (image), JPG (image), SVG, HEIC, HEIF, EMF, WMF, EPS, JXL, JPEG 2000, QOI, TGA, PCX, APNG, XML, TOML, INI, SQLite, TAR.ZST, OBJ, STL, PLY, GLB, 3MF, MOBI, AZW3, FB2, LRF, PDB, SNB, KEPUB, TTF, OTF, WOFF, WOFF2, Parquet, ORC, Feather."
                  *       }
                  *     }
                  */
@@ -1156,7 +1205,7 @@ export interface components {
                  * @example {
                  *       "error": {
                  *         "code": "E_UNSUPPORTED",
-                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .dot, .dotx, .odt, .ods, .odg, .odp, .xlsx, .xls, .xlsm, .pptx, .ppt, .pptm, .pps, .ppsx, .pot, .potx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg, .psd, .pdf, .md, .rst, .tex, .textile, .org, .opml, .muse, .ipynb, .zip, .tar, .tgz, .tbz2, .txz, .gz, .bz2, .xz, .7z, .iso, .cbz, .bmp, .gif, .tiff, .webp, .avif, .ico, .srt, .vtt, .ass, .ssa, .tsv, .json, .yaml, .yml, .jsonl."
+                 *         "message": "This file type cannot be converted. Supported types: .docx, .docm, .doc, .dot, .dotx, .odt, .ods, .odg, .odp, .xlsx, .xls, .xlsm, .pptx, .ppt, .pptm, .pps, .ppsx, .pot, .potx, .csv, .txt, .html, .htm, .rtf, .png, .jpg, .jpeg, .psd, .pdf, .md, .rst, .tex, .textile, .org, .opml, .muse, .ipynb, .zip, .tar, .tgz, .tbz2, .txz, .gz, .bz2, .xz, .zst, .7z, .rar, .iso, .cbz, .bmp, .gif, .tiff, .webp, .avif, .ico, .jxl, .jp2, .qoi, .tga, .pcx, .apng, .srt, .vtt, .ass, .ssa, .tsv, .json, .yaml, .yml, .jsonl, .xml, .toml, .ini, .sqlite, .svg, .emf, .wmf, .eps, .heic, .heif, .obj, .stl, .ply, .glb, .3mf, .off, .epub, .mobi, .azw3, .fb2, .lrf, .pdb, .ttf, .otf, .woff, .woff2, .parquet, .orc, .feather, .eml."
                  *       }
                  *     }
                  */
@@ -1335,6 +1384,8 @@ export interface components {
         /** @description Too many requests from this address in the current window. */
         RateLimited: {
             headers: {
+                /** @description Whole seconds until the rate-limit window resets. */
+                "Retry-After"?: number;
                 [name: string]: unknown;
             };
             content: {
@@ -1987,6 +2038,64 @@ export interface operations {
             504: components["responses"]["Timeout"];
         };
     };
+    convertYouTubeToFormat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `mp4` or `mp3`. Case-sensitive. */
+                target: "mp4" | "mp3";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeRequest"];
+            };
+        };
+        responses: {
+            /** @description The job was accepted and is now queued or running. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaJobAccepted"];
+                };
+            };
+            /**
+             * @description The body was not JSON carrying a `url`, or the `url` is not a link to
+             *     a YouTube video.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description `target` is neither `mp4` nor `mp3`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "E_UNKNOWN_TARGET",
+                     *         "message": "YouTube videos can only be converted to MP4 or MP3."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Busy"];
+        };
+    };
     mergePdfs: {
         parameters: {
             query?: never;
@@ -2501,8 +2610,19 @@ export interface operations {
                      *     }
                      */
                     "application/json": {
-                        /** @constant */
-                        status: "ok";
+                        status: string;
+                        /** @description Admission-queue stats for `/convert/{target}`. Informational only - a saturated queue does not change this endpoint's 200 status. */
+                        queue?: {
+                            running?: number;
+                            queued?: number;
+                            maxConcurrent?: number;
+                            maxQueued?: number;
+                        };
+                        /**
+                         * @description The same stats for `/media/{target}`'s own, separate queue.
+                         * @constant
+                         */
+                        mediaQueue?: "ok";
                     };
                 };
             };
