@@ -27,7 +27,7 @@
 # ---------------------------------------------------------------------------
 # Build stage
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS build
+FROM node:22-bookworm-slim@sha256:2f0e17f8955e766e776ae16d3ac47519ca3edf47c07e5c1423527926fdd5d568 AS build
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ WORKDIR /app
 # package.json has drifted from it, so the image cannot quietly contain a
 # dependency tree nobody has run the tests against.
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 
@@ -56,7 +56,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Runtime stage
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS runtime
+FROM node:22-bookworm-slim@sha256:2f0e17f8955e766e776ae16d3ac47519ca3edf47c07e5c1423527926fdd5d568 AS runtime
 
 # The only stage that needs npm is the one above. Nothing here installs
 # anything, and npm is a large, frequently-CVE'd directory inside an image whose

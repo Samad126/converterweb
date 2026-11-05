@@ -3,11 +3,73 @@ name: Deploy Frontend
 on:
   push:
     branches: [master]
+    # Nothing in these paths ends up in the image, so a commit touching only
+    # them has nothing to deploy.
+    paths-ignore:
+      - '**.md'
+      - '.claude/**'
+      - 'tests/**'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# Without this, two quick pushes ran two deploys at once, and both tried to
+# recreate the same container - one failed with "container name already in
+# use". Serialise them, and let an in-flight deploy finish.
+concurrency:
+  group: deploy-converterweb
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/samad126/converterweb
 
 jobs:
-  deploy:
+  # Built on GitHub's runner, not the server: `next build` took ~10 minutes on
+  # the server and minutes less here, and the server stops spending RAM/CPU on
+  # builds while it serves users.
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # NEXT_PUBLIC_* is inlined into the bundle at build time (see the
+      # Dockerfile), so the API URL has to be known HERE, not on the server.
+      # It comes from the repo variable of the same name
+      # (Settings -> Secrets and variables -> Actions -> Variables).
+      - name: Check build-time API URL is set
+        env:
+          URL: ${{ vars.NEXT_PUBLIC_CONVERTER_BASE_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error::Set the NEXT_PUBLIC_CONVERTER_BASE_URL repository variable (it is baked into the bundle)."
+            exit 1
+          fi
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            NEXT_PUBLIC_CONVERTER_BASE_URL=${{ vars.NEXT_PUBLIC_CONVERTER_BASE_URL }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Deploy frontend to server
         env:
@@ -15,7 +77,42 @@ jobs:
         run: |
           sshpass -e ssh -p 44544 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             set -e
-            git config --global --add safe.directory /pool/www/converter.alakbaroff.com/frontend
-            git -C /pool/www/converter.alakbaroff.com/frontend pull origin master
-            docker compose -f /pool/www/converter.alakbaroff.com/frontend/docker-compose.yml up -d --no-deps --build converterweb
+
+            APP_DIR=/pool/www/converter.alakbaroff.com/frontend
+
+            # The exact image this run built. Roll back with:
+            #   IMAGE_TAG=<old sha> docker compose -f $APP_DIR/docker-compose.yml up -d converterweb
+            export IMAGE_TAG=${{ github.sha }}
+
+            git config --global --add safe.directory "$APP_DIR"
+
+            # fetch + hard reset rather than `pull`: this checkout is a deploy
+            # target, and `pull` refuses outright the moment it diverges.
+            git -C "$APP_DIR" fetch origin master
+            git -C "$APP_DIR" reset --hard origin/master
+
+            docker compose -f "$APP_DIR/docker-compose.yml" pull converterweb
+            docker compose -f "$APP_DIR/docker-compose.yml" up -d --no-deps converterweb
+
+            # `up -d` returns once the container starts, not once it serves.
+            # A flag and a `break`, not `exit 0` inside the loop: exiting while
+            # the heredoc still has unread lines makes ssh report failure.
+            healthy=0
+            for i in $(seq 1 24); do
+              if curl -fsS -o /dev/null http://127.0.0.1:3011/ 2>/dev/null; then
+                echo "converterweb healthy after $((i * 5))s"
+                healthy=1
+                break
+              fi
+              sleep 5
+            done
+
+            if [ "$healthy" -ne 1 ]; then
+              echo "converterweb did not become healthy within 120s" >&2
+              docker compose -f "$APP_DIR/docker-compose.yml" logs --tail 100 converterweb >&2
+              exit 1
+            fi
+
+            # Remove the previous, now-untagged image so they don't pile up.
+            docker image prune -f
           EOF

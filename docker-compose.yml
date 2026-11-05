@@ -25,7 +25,12 @@ services:
       # leaving it empty by accident would not announce itself.
       args:
         NEXT_PUBLIC_CONVERTER_BASE_URL: ${NEXT_PUBLIC_CONVERTER_BASE_URL:?set NEXT_PUBLIC_CONVERTER_BASE_URL in .env}
-    image: converterweb
+    # The deploy pulls a prebuilt image from GHCR (built by the GitHub Actions
+    # workflow with the URL from the repo variable of the same name), so the
+    # server no longer builds. IMAGE_TAG is the commit SHA being deployed; set
+    # it to an older one to roll back. `build:` above still drives local
+    # `docker compose up --build`.
+    image: ghcr.io/samad126/converterweb:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
     # --- How your proxy reaches it ------------------------------------------
