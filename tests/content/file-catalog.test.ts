@@ -23,6 +23,8 @@ describe("the file conversion catalog", () => {
       CATALOG.flatMap((entry) => entry.source.extensions.map((extension) => `${extension}>${entry.target}`)),
     );
     for (const entry of FILE_CATALOG) {
+      // JPEG deliberately has its own pages, separate from the document catalog's JPG one.
+      if (entry.slug.startsWith("jpeg_")) continue;
       for (const extension of entry.extensions) {
         expect(covered.has(`${extension}>${entry.targetId}`), entry.slug).toBe(false);
       }

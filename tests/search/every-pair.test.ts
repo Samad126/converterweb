@@ -42,7 +42,9 @@ describe("header search finds every conversion page", () => {
 
   it("finds JPEG to PNG and JPEG to JPG", () => {
     const routes = (q: string) => searchItems(INDEX, q).map((r) => r.item.route);
-    expect(routes("jpeg to png")).toContain("/files/jpg_to_png_image");
+    expect(routes("jpeg to png")[0]).toBe("/files/jpeg_to_png");
+    expect(routes("jpeg to pdf")).toContain("/files/jpeg_to_pdf");
+    expect(routes("jpg to png")[0]).toBe("/files/jpg_to_png_image");
     expect(routes("jpeg to jpg")).toContain("/files/jpeg_to_jpg");
   });
 });

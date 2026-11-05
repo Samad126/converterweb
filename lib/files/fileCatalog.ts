@@ -91,12 +91,16 @@ const CATEGORIES: Readonly<Record<FileCategory, CategoryInfo>> = {
 
 /** Extensions that are the same format under two names share one page. */
 const ALIASES: readonly (readonly string[])[] = [
-  [".jpg", ".jpeg", ".jpe", ".jfif"],
+  // JPG and JPEG are the same format but get separate pages (separate search terms).
+  [".jpeg", ".jpe", ".jfif"],
   [".tiff", ".tif"],
   [".yaml", ".yml"],
   [".html", ".htm"],
   [".heic", ".heif"],
 ];
+
+/** Spellings that get pages of their own even though the document catalog's page for the format accepts them. */
+const SEPARATE_PAGES: ReadonlySet<string> = new Set([".jpeg", ".jpe", ".jfif"]);
 
 /** Targets that are extraction tools with their own pages, not conversions. */
 const SKIPPED_TARGETS: ReadonlySet<string> = new Set(["tables", "layers"]);
@@ -133,7 +137,9 @@ function slugPart(value: string): string {
 function coveredByCatalog(): ReadonlySet<string> {
   const covered = new Set<string>();
   for (const entry of CATALOG) {
-    for (const extension of entry.source.extensions) covered.add(`${extension}>${entry.target}`);
+    for (const extension of entry.source.extensions) {
+      if (!SEPARATE_PAGES.has(extension)) covered.add(`${extension}>${entry.target}`);
+    }
   }
   return covered;
 }
@@ -159,11 +165,10 @@ function buildEntry(
   const rawTargetLabel = FILE_TARGETS[targetId]?.label ?? targetId.toUpperCase();
   // "PNG (image)" disambiguates the API's error text; in a page title it is noise.
   const targetLabel = rawTargetLabel.replace(/ \(image\)$/, "");
-  // A JPEG re-saved as .jpg is the one pair whose source and target share a
-  // label, so it gets its own name instead of "JPG to JPG".
-  const jpegToJpg = first === ".jpg" && targetId === "jpg-image";
-  const slug = jpegToJpg ? "jpeg_to_jpg" : `${slugPart(first)}_to_${slugPart(targetId)}`;
-  const heading = jpegToJpg ? "JPEG to JPG" : `${sourceLabel} to ${targetLabel}`;
+  // JPEG pages drop the "-image" disambiguator: /files/jpeg_to_png, /files/jpeg_to_jpg.
+  const targetSlug = first === ".jpeg" ? slugPart(targetId.replace(/-image$/, "")) : slugPart(targetId);
+  const slug = `${slugPart(first)}_to_${targetSlug}`;
+  const heading = `${sourceLabel} to ${targetLabel}`;
   const limit = formatBytes(MAX_UPLOAD_BYTES);
   const noun = CATEGORIES[category].noun;
   const accepted = extensions.join(", ");
