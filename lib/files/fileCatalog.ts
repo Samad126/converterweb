@@ -50,7 +50,7 @@ const CATEGORIES: Readonly<Record<FileCategory, CategoryInfo>> = {
     label: "Images",
     noun: "image",
     extensions: [
-      ".png", ".jpg", ".jpeg", ".psd", ".bmp", ".gif", ".tiff", ".webp", ".avif", ".ico", ".jxl",
+      ".png", ".jpg", ".jpeg", ".jpe", ".jfif", ".psd", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".avif", ".ico", ".jxl",
       ".jp2", ".qoi", ".tga", ".pcx", ".apng", ".heic", ".heif", ".svg", ".emf", ".wmf", ".eps",
     ],
   },
@@ -91,7 +91,8 @@ const CATEGORIES: Readonly<Record<FileCategory, CategoryInfo>> = {
 
 /** Extensions that are the same format under two names share one page. */
 const ALIASES: readonly (readonly string[])[] = [
-  [".jpg", ".jpeg"],
+  [".jpg", ".jpeg", ".jpe", ".jfif"],
+  [".tiff", ".tif"],
   [".yaml", ".yml"],
   [".html", ".htm"],
   [".heic", ".heif"],
@@ -155,9 +156,14 @@ function buildEntry(
 ): FileConversionEntry {
   const first = extensions[0] ?? "";
   const sourceLabel = first.slice(1).toUpperCase();
-  const targetLabel = FILE_TARGETS[targetId]?.label ?? targetId.toUpperCase();
-  const slug = `${slugPart(first)}_to_${slugPart(targetId)}`;
-  const heading = `${sourceLabel} to ${targetLabel}`;
+  const rawTargetLabel = FILE_TARGETS[targetId]?.label ?? targetId.toUpperCase();
+  // "PNG (image)" disambiguates the API's error text; in a page title it is noise.
+  const targetLabel = rawTargetLabel.replace(/ \(image\)$/, "");
+  // A JPEG re-saved as .jpg is the one pair whose source and target share a
+  // label, so it gets its own name instead of "JPG to JPG".
+  const jpegToJpg = first === ".jpg" && targetId === "jpg-image";
+  const slug = jpegToJpg ? "jpeg_to_jpg" : `${slugPart(first)}_to_${slugPart(targetId)}`;
+  const heading = jpegToJpg ? "JPEG to JPG" : `${sourceLabel} to ${targetLabel}`;
   const limit = formatBytes(MAX_UPLOAD_BYTES);
   const noun = CATEGORIES[category].noun;
   const accepted = extensions.join(", ");

@@ -163,7 +163,39 @@ function mergeSameSources(groups: readonly FinderGroup[]): FinderGroup[] {
     const first = byLabel.get(group.label);
     byLabel.set(group.label, first ? { ...first, sources: [...first.sources, ...group.sources] } : group);
   }
-  return [...byLabel.values()];
+  return withJpegSource([...byLabel.values()]);
+}
+
+/**
+ * JPG and JPEG are one format under two spellings and share their pages, but
+ * people look for either word. The finder lists JPEG as a source of its own,
+ * with the same targets; `JPEG -> JPG` is only reachable from it, since from
+ * "JPG" it would read as a file becoming itself.
+ */
+function withJpegSource(groups: FinderGroup[]): FinderGroup[] {
+  return groups.map((group) => {
+    const base = group.sources.find((source) => source.label === "JPG");
+    if (!base) return group;
+    // Every extension the JPG page accepts except the label's own, plus the word.
+    const spellings = [...base.searchTerms.filter((term) => term.startsWith(".") && term !== `.${base.label.toLowerCase()}`), "jpeg"];
+    const isSelf = (target: FinderTarget) => target.href === "/files/jpeg_to_jpg";
+    const jpeg: FinderSource = {
+      ...base,
+      key: "file:jpeg",
+      label: "JPEG",
+      badge: "JPEG",
+      searchTerms: [...new Set([...base.searchTerms, ...spellings])],
+    };
+    const plainJpg: FinderSource = {
+      ...base,
+      searchTerms: base.searchTerms.filter((term) => !spellings.includes(term)),
+      targets: base.targets.filter((target) => !isSelf(target)),
+    };
+    return {
+      ...group,
+      sources: group.sources.flatMap((source) => (source === base ? [plainJpg, jpeg] : [source])),
+    };
+  });
 }
 
 export const FINDER_GROUPS: readonly FinderGroup[] = buildGroups();
