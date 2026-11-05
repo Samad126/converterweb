@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 
 import { fetchFormats } from "../api/api";
+import type { FormatsResponse } from "../api/contract";
 import { buildSearchIndex } from "./buildIndex";
 import type { SearchItem } from "./types";
 
@@ -30,7 +31,14 @@ export function useSearchIndex(): SearchIndexState {
         setState({ status: "ready", items: buildSearchIndex(formats) });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: "error" });
+        // The pages come from the static catalogs; `GET /formats` only adds media types.
+        // Search should not die with the API, so fall back to an index without them.
+        if (cancelled) return;
+        try {
+          setState({ status: "ready", items: buildSearchIndex({ sources: [], targets: [] } as unknown as FormatsResponse) });
+        } catch {
+          setState({ status: "error" });
+        }
       });
 
     return () => {
