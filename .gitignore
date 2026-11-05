@@ -19,3 +19,5 @@ next-env.d.ts
 # Editor and OS noise
 .DS_Store
 *.swp
+
+.claude/settings.local.json
