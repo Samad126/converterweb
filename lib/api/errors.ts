@@ -21,7 +21,7 @@ export type FailureKind =
   | "http"
   /** The request never reached the server, or the connection died. */
   | "network"
-  /** Our own 120 s abort fired before the server answered. */
+  /** Our own 240 s abort fired before the server answered. */
   | "timed-out"
   /** The person pressed Cancel. */
   | "cancelled"

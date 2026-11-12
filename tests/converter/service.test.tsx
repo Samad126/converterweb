@@ -152,12 +152,12 @@ describe("stopping a conversion", () => {
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
-  it("gives up at 120 seconds and says the conversion took too long", async () => {
+  it("gives up at 240 seconds and says the conversion took too long", async () => {
     const user = await setupPage();
     await chooseFile(user, "a.docx");
     await chooseFormat(user, "PDF");
 
-    // The deadline is 120 s and waiting for it is not an option, so the test
+    // The deadline is 240 s and waiting for it is not an option, so the test
     // finds the timer the app armed and fires it. The number it asserts is the
     // contract's, not one the test chose.
     const calls: Array<[() => void, number | undefined]> = [];
@@ -191,7 +191,7 @@ describe("stopping a conversion", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("The conversion took too long and was cancelled.");
     // The server's sentence wins when the server answers. This one is ours,
-    // because at 120 seconds it had not.
+    // because at 240 seconds it had not.
     expect(alert).not.toHaveTextContent("This document took too long to convert.");
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });

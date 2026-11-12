@@ -1041,7 +1041,7 @@ export function composeEntry(
       {
         question: "How long does it take?",
         answer:
-          "Seconds for most documents. Simple text and images are near-instant; a large presentation can take longer. A conversion still running at 90 seconds is stopped by the server, and this page gives up at 120.",
+          "Seconds for most documents. Simple text and images are near-instant; a large presentation can take longer. A conversion still running at 180 seconds is stopped by the server, and this page gives up at 120.",
       },
     ],
   };

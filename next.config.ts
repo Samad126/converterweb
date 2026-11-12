@@ -5,7 +5,7 @@ import type { NextConfig } from "next";
  *
  * The browser talks to the converter directly — see the note at the top of
  * `lib/api/api.ts`. A Next route handler in front of the API would add its own
- * timeout to a budget that is already 120 s, and would hold a second copy of a
+ * timeout to a budget that is already 240 s, and would hold a second copy of a
  * 25 MiB upload in memory while streaming it through.
  */
 const nextConfig: NextConfig = {

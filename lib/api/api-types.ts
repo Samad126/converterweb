@@ -1439,10 +1439,10 @@ export interface components {
             };
         };
         /**
-         * @description The conversion exceeded the server's 90 second deadline. The running
+         * @description The conversion exceeded the server's 180 second deadline. The running
          *     LibreOffice process is sent `SIGTERM` and then `SIGKILL`.
          *
-         *     This is deliberately shorter than the client's own 120 second abort, so
+         *     This is deliberately shorter than the client's own 240 second abort, so
          *     that the server answers with this response rather than being killed
          *     mid-conversion and leaving the phone to report a network failure.
          */

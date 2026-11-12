@@ -77,7 +77,7 @@ See `.env.example`.
 
 The browser talks to the API directly. There is no Next route handler in front
 of it on purpose: a handler would add its own timeout to a budget that is
-already 120 seconds, and it would hold a second copy of a 100 MiB upload in
+already 240 seconds, and it would hold a second copy of a 100 MiB upload in
 memory while streaming it through.
 
 As deployed, this **is** set — to `https://converterapi.alakbaroff.com`, in
@@ -317,7 +317,7 @@ Two consequences worth knowing:
 | Both RFC 6266 filename forms, `filename*` preferred | `lib/api/contentDisposition.ts` |
 | Exactly one `file` part, as `application/octet-stream` | `lib/api/api.ts`, asserted byte-for-byte in `tests/api/transport.test.ts` |
 | 104857600 bytes (100 MiB), checked before the request | `lib/constants.ts` (`MAX_UPLOAD_BYTES`), `lib/converter/useConverter.ts` (`selectFile`) |
-| The client gives up at 120 s, after the server's 90 s | `lib/constants.ts` (`CLIENT_ABORT_MS`) |
+| The client gives up at 240 s, after the server's 180 s | `lib/constants.ts` (`CLIENT_ABORT_MS`) |
 | `X-Request-Id` shown under an error with a copy button | `components/ui/ErrorNote.tsx` |
 | A YouTube link is sent as typed, never fetched by the page; the service reads the video id | `lib/api/mediaApi.ts` (`startYouTubeJob`), `lib/media/useYouTubeTool.ts` |
 | A failed YouTube job is recovered by `error.code`, because the status endpoint answers `200` for it | `lib/api/errors.ts` (`recoveryForLink`), `tests/api/youtube-recovery.test.ts` |
@@ -481,7 +481,7 @@ Two other decisions on that page are worth knowing:
 tests/api/contentDisposition.test.ts        the two RFC 6266 forms, decoding, sanitising
 tests/api/errors.test.ts                    the envelope, our sentences, status → recovery
 tests/api/youtube-recovery.test.ts          which action a YouTube link's failure offers, by error.code
-tests/api/transport.test.ts                 the real multipart bytes, abort, the 120 s deadline
+tests/api/transport.test.ts                 the real multipart bytes, abort, the 240 s deadline
 tests/api/transport/                        fixtures for the above (a real server on an ephemeral port)
 tests/content/catalog.test.tsx              the catalog against the matrix, both directions
 tests/content/categories.test.ts            every PDF_TOOLS id lands in exactly one homepage category

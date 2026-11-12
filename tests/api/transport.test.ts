@@ -127,7 +127,7 @@ describe("cancelling", () => {
       // Deliberately never answers: this is the server being slow.
     });
 
-    // The deadline is 120 s and waiting for it is not an option, so the test
+    // The deadline is 240 s and waiting for it is not an option, so the test
     // finds the timer the code armed and fires it. The delay it asserts is the
     // contract's number, not a number the test chose.
     const calls: Array<[() => void, number | undefined]> = [];
