@@ -805,6 +805,7 @@ export const FILE_MATRIX: Readonly<Record<string, readonly string[]>> = {
     "kepub"
   ],
   ".md": [
+    "pdf",
     "docx",
     "html",
     "odt",
