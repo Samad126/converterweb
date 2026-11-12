@@ -1079,7 +1079,7 @@ export const HOME_FAQS: readonly { question: string; answer: string }[] = [
   },
   {
     question: "Is there a file size limit?",
-    answer: `${formatBytes(MAX_UPLOAD_BYTES)} per file. A conversion still running after 90 seconds is stopped by the server, and the page gives up at 120. Neither limit is a paywall — they are the point at which the service stops being able to answer honestly.`,
+    answer: `${formatBytes(MAX_UPLOAD_BYTES)} per file. A conversion still running after 3 minutes is stopped by the server, and the page gives up at 120. Neither limit is a paywall — they are the point at which the service stops being able to answer honestly.`,
   },
   {
     question: "Does it work on a phone?",

@@ -147,7 +147,7 @@ describe("cancelling", () => {
 
         const deadline = calls.find(([, delay]) => delay === CLIENT_ABORT_MS);
         expect(deadline, "no timer armed at CLIENT_ABORT_MS").toBeDefined();
-        expect(CLIENT_ABORT_MS).toBe(120_000);
+        expect(CLIENT_ABORT_MS).toBe(240_000);
 
         deadline?.[0]();
 

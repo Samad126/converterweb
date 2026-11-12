@@ -16,12 +16,12 @@ export const MAX_UPLOAD_BYTES = 104_857_600;
 /**
  * Our own abort deadline.
  *
- * The server's deadline is 90 s, after which it answers `504` with a sentence
+ * The server's deadline is 180 s, after which it answers `504` with a sentence
  * of its own. Ours is deliberately longer so that the server's answer wins: a
- * client that aborted at 90 s would race the server's own timeout and turn a
+ * client that aborted at 180 s would race the server's own timeout and turn a
  * well-explained `504` into "the server could not be reached".
  */
-export const CLIENT_ABORT_MS = 120_000;
+export const CLIENT_ABORT_MS = 240_000;
 
 /**
  * How long the button stays disabled after a `429`.
