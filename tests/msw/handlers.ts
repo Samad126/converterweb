@@ -21,6 +21,11 @@ export const BASE = "http://converter.test";
 export const handlers = [
   http.get(`${BASE}/formats`, () => HttpResponse.json(MATRIX)),
   http.get(`${BASE}/health`, () => HttpResponse.json({ status: "ok" })),
+  // The jobs endpoint is absent unless a test adds it, which is exactly what an
+  // older server looks like: the client falls back to the synchronous request.
+  http.post(`${BASE}/convert/:target/jobs`, () =>
+    HttpResponse.json({ error: { code: "E_NOT_FOUND", message: "Not found." } }, { status: 404 }),
+  ),
 ];
 
 /** The JSON error envelope, exactly as the contract describes it. */

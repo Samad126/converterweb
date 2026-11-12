@@ -15,7 +15,7 @@
  * hung page, and a conversion that has already run for two minutes with no way
  * to stop it is worse.
  */
-import { CLIENT_ABORT_MS, UPLOAD_PART_NAME, UPLOAD_PART_TYPE } from "../constants";
+import { CLIENT_ABORT_MS, JOB_DEADLINE_MS, UPLOAD_PART_NAME, UPLOAD_PART_TYPE } from "../constants";
 import type { FormatsResponse, HealthResponse } from "./contract";
 import {
   type Failure,
@@ -239,6 +239,12 @@ export interface ConvertHandle {
   abort: () => void;
 }
 
+/** What `uploadRequest` hands back: the same promise-and-abort pair, for any result type. */
+interface UploadHandle<T> {
+  readonly promise: Promise<T>;
+  abort: () => void;
+}
+
 /**
  * `POST /convert/{target}` with one or more parts, all named `files`.
  *
@@ -253,17 +259,19 @@ export interface ConvertHandle {
  * `multiple` target); with two or more it is always `application/zip`,
  * regardless of target — see `UPLOAD_PART_NAME`.
  */
-export function convert(
-  target: string,
+function uploadRequest<T>(
+  path: string,
   files: readonly File[],
-  callbacks: ConvertCallbacks = {},
-): ConvertHandle {
+  callbacks: ConvertCallbacks,
+  responseType: "blob" | "text",
+  succeeded: (xhr: XMLHttpRequest, requestId: string | null) => T,
+): UploadHandle<T> {
   const xhr = new XMLHttpRequest();
   let settled = false;
   let timedOut = false;
   let uploadReportedComplete = false;
 
-  const promise = new Promise<ConvertResult>((resolve, reject) => {
+  const promise = new Promise<T>((resolve, reject) => {
     const finish = (settle: () => void): void => {
       if (settled) return;
       settled = true;
@@ -321,18 +329,16 @@ export function convert(
 
       const status = xhr.status;
       const requestId = xhr.getResponseHeader("X-Request-Id");
-      const contentType = xhr.getResponseHeader("Content-Type");
 
       // Branch on the status before reading anything. A 200 is never an error
       // state, and a non-2xx is never a download — even when its body looks
       // like one.
       if (status >= 200 && status < 300) {
-        resolve({
-          blob: toBlob(xhr.response),
-          mediaType: normalizeMediaType(contentType),
-          disposition: xhr.getResponseHeader("Content-Disposition"),
-          requestId,
-        });
+        try {
+          resolve(succeeded(xhr, requestId));
+        } catch (error) {
+          reject(error);
+        }
         return;
       }
 
@@ -341,8 +347,8 @@ export function convert(
       });
     };
 
-    xhr.open("POST", apiUrl(`/convert/${encodeURIComponent(target)}`), true);
-    xhr.responseType = "blob";
+    xhr.open("POST", apiUrl(path), true);
+    xhr.responseType = responseType;
     // 0 means "no client-side timeout", which is the point: the deadline above
     // is ours and it must win, so that a browser default can never fire first
     // and report a timeout we did not decide on.
@@ -365,6 +371,236 @@ export function convert(
       xhr.abort();
     },
   };
+}
+
+/** The synchronous `POST /convert/{target}`: the answer is the file itself. */
+function convertSync(
+  target: string,
+  files: readonly File[],
+  callbacks: ConvertCallbacks,
+): ConvertHandle {
+  return uploadRequest(
+    `/convert/${encodeURIComponent(target)}`,
+    files,
+    callbacks,
+    "blob",
+    (xhr, requestId) => ({
+      blob: toBlob(xhr.response),
+      mediaType: normalizeMediaType(xhr.getResponseHeader("Content-Type")),
+      disposition: xhr.getResponseHeader("Content-Disposition"),
+      requestId,
+    }),
+  );
+}
+
+/** One long-poll request: the server holds it up to this long, well under any proxy's idle limit. */
+const JOB_WAIT_SECONDS = 25;
+
+interface JobStatus {
+  status: "queued" | "running" | "done" | "failed";
+  downloadUrl?: string;
+  error?: unknown;
+  errorStatus?: number;
+}
+
+function parseJobStatus(text: string): JobStatus | null {
+  try {
+    const body = JSON.parse(text) as unknown;
+    if (!isRecord(body) || typeof body.status !== "string") return null;
+    return body as unknown as JobStatus;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `POST /convert/{target}`, without holding one request open for the whole
+ * conversion.
+ *
+ * A single request that sits quiet for the length of a big conversion gets cut
+ * by whatever is in front of the server (Cloudflare gives up after 100 s), and
+ * the server then finishes a conversion nobody is waiting for. So: upload to
+ * `/convert/{target}/jobs`, which answers `202` as soon as the file is
+ * accepted, then ask for the status with a long poll — the server answers the
+ * moment the job changes state — and fetch the finished file.
+ *
+ * A server that does not have the jobs endpoint answers `404`/`405`; that
+ * falls back to the synchronous request, so a new page works against an old
+ * server and the other way round.
+ */
+export function convert(
+  target: string,
+  files: readonly File[],
+  callbacks: ConvertCallbacks = {},
+): ConvertHandle {
+  let cancelled = false;
+  let active: { abort: () => void } | null = null;
+  const controller = new AbortController();
+
+  const promise = (async (): Promise<ConvertResult> => {
+    const start = uploadRequest(
+      `/convert/${encodeURIComponent(target)}/jobs`,
+      files,
+      callbacks,
+      "text",
+      (xhr, requestId) => {
+        const job = parseJobStatus(xhr.responseText);
+        const id = isRecord(job) ? (job as unknown as { id?: unknown }).id : undefined;
+        if (xhr.status !== 202 || typeof id !== "string") {
+          throw new ConversionFailed(unreadableResponseFailure(xhr.status, requestId));
+        }
+        return { id, requestId };
+      },
+    );
+    active = start;
+
+    let started: { id: string; requestId: string | null };
+    try {
+      started = await start.promise;
+    } catch (error) {
+      const unsupported =
+        error instanceof ConversionFailed &&
+        error.failure.kind === "http" &&
+        (error.failure.status === 404 || error.failure.status === 405);
+      if (!unsupported || cancelled) throw error;
+      const sync = convertSync(target, files, callbacks);
+      active = sync;
+      return sync.promise;
+    }
+
+    active = { abort: () => controller.abort() };
+    return pollJob(started.id, started.requestId, controller.signal, () => cancelled);
+  })();
+
+  return {
+    promise,
+    abort: (): void => {
+      cancelled = true;
+      active?.abort();
+      controller.abort();
+    },
+  };
+}
+
+async function pollJob(
+  id: string,
+  requestId: string | null,
+  signal: AbortSignal,
+  isCancelled: () => boolean,
+): Promise<ConvertResult> {
+  const deadline = Date.now() + JOB_DEADLINE_MS;
+  let lastStatus = "queued";
+  let failures = 0;
+
+  const guard = (error: unknown): never => {
+    if (isAbortError(error) || isCancelled()) throw new ConversionFailed(cancelledFailure());
+    throw error;
+  };
+
+  for (;;) {
+    if (isCancelled()) throw new ConversionFailed(cancelledFailure());
+    if (Date.now() > deadline) throw new ConversionFailed(timedOutFailure());
+
+    let response: Response;
+    try {
+      response = await fetch(
+        apiUrl(`/convert/jobs/${encodeURIComponent(id)}?wait=${JOB_WAIT_SECONDS}&status=${lastStatus}`),
+        { headers: { Accept: "application/json" }, cache: "no-store", signal },
+      );
+    } catch (error) {
+      if (isAbortError(error) || isCancelled()) return guard(error);
+      // A dropped connection mid-wait is not a failed conversion: the job is
+      // still running on the server. Try again a few times before giving up.
+      failures += 1;
+      if (failures > 5) throw new ConversionFailed(networkFailure());
+      await sleep(1000 * failures, signal).catch(guard);
+      continue;
+    }
+
+    const text = await response.text().catch(() => "");
+    if (!response.ok) {
+      // 502/503/504 from a proxy in the middle of a long poll are transient too.
+      if ([502, 503, 504].includes(response.status) && ++failures <= 5) {
+        await sleep(1000 * failures, signal).catch(guard);
+        continue;
+      }
+      throw new ConversionFailed(
+        failureFromResponse(response.status, text, requestId, response.headers.get("Retry-After")),
+      );
+    }
+    failures = 0;
+
+    const job = parseJobStatus(text);
+    if (!job) throw new ConversionFailed(unreadableResponseFailure(response.status, requestId));
+    lastStatus = job.status;
+
+    if (job.status === "failed") {
+      throw new ConversionFailed(
+        failureFromResponse(
+          job.errorStatus ?? 500,
+          JSON.stringify({ error: job.error }),
+          requestId,
+          null,
+        ),
+      );
+    }
+    if (job.status === "done") return downloadJob(id, requestId, signal, isCancelled, guard);
+  }
+}
+
+async function downloadJob(
+  id: string,
+  requestId: string | null,
+  signal: AbortSignal,
+  isCancelled: () => boolean,
+  guard: (error: unknown) => never,
+): Promise<ConvertResult> {
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(`/convert/jobs/${encodeURIComponent(id)}/download`), {
+      cache: "no-store",
+      signal,
+    });
+  } catch (error) {
+    if (isAbortError(error) || isCancelled()) return guard(error);
+    throw new ConversionFailed(networkFailure());
+  }
+  if (!response.ok) {
+    throw new ConversionFailed(
+      failureFromResponse(response.status, await response.text().catch(() => ""), requestId, null),
+    );
+  }
+  let blob: Blob;
+  try {
+    blob = await response.blob();
+  } catch (error) {
+    if (isAbortError(error) || isCancelled()) return guard(error);
+    throw new ConversionFailed(networkFailure());
+  }
+  return {
+    blob,
+    mediaType: normalizeMediaType(response.headers.get("Content-Type")),
+    disposition: response.headers.get("Content-Disposition"),
+    requestId,
+  };
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
 }
 
 /** `lengthComputable` is false for a streamed upload of unknown length. */

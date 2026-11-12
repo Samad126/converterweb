@@ -24,6 +24,13 @@ export const MAX_UPLOAD_BYTES = 104_857_600;
 export const CLIENT_ABORT_MS = 240_000;
 
 /**
+ * How long the client keeps asking about a conversion job before giving up.
+ * The server caps one file at 5 minutes and a request holds up to ten, so this
+ * is only the backstop for a job that never reports back.
+ */
+export const JOB_DEADLINE_MS = 30 * 60_000;
+
+/**
  * How long the button stays disabled after a `429`.
  *
  * The server allows 30 requests per minute per IP in a fixed 60 s window
