@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AUTHOR, SITE_NAME, absoluteUrl } from "@/lib/content/site";
@@ -92,16 +93,9 @@ export default function DownloadPage(): React.ReactElement {
           , with a certificate issued in the name of the SignPath Foundation.
           Until signing is approved and active, Windows SmartScreen may warn
           about the installer; you can verify what you downloaded against the
-          public build logs on GitHub.
-        </p>
-      </section>
-
-      <section className="mt-12 flex flex-col gap-4">
-        <h2 className="section-title">Privacy</h2>
-        <p className="body-text">
-          The app has no accounts and no telemetry, and it sends nothing about
-          you or your files anywhere. Its only network use is downloading a
-          converter you chose to install, or a video you asked it to fetch.
+          public build logs on GitHub. See the{" "}
+          <Link href="/privacy/desktop">privacy policy</Link> and{" "}
+          <Link href="/terms/desktop">terms of use</Link>.
         </p>
       </section>
 

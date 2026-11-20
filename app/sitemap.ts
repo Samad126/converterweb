@@ -34,7 +34,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/download",
     "/about",
     "/privacy",
+    "/privacy/desktop",
     "/terms",
+    "/terms/desktop",
     ...PDF_TOOLS.flatMap((tool) => (tool.route ? [tool.route] : [])),
   ];
 

@@ -120,7 +120,13 @@ export function SiteFooter(): React.ReactElement {
                 <Link href="/privacy">Privacy policy</Link>
               </li>
               <li>
+                <Link href="/privacy/desktop">Desktop app privacy</Link>
+              </li>
+              <li>
                 <Link href="/terms">Terms of use</Link>
+              </li>
+              <li>
+                <Link href="/terms/desktop">Desktop app terms</Link>
               </li>
             </ul>
           </nav>
