@@ -31,6 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools",
     "/tools/extract-tables",
     "/tools/psd-to-layers",
+    "/download",
     "/about",
     "/privacy",
     "/terms",

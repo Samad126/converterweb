@@ -195,10 +195,10 @@ describe("the routes", () => {
         YOUTUBE_CONVERSIONS.length +
         FILE_CATALOG.length +
         4 +
-        7 +
+        8 +
         pdfRoutes.length,
     );
-    for (const route of ["/pdf", "/tools", "/about", "/privacy", "/terms", ...pdfRoutes]) {
+    for (const route of ["/pdf", "/tools", "/download", "/about", "/privacy", "/terms", ...pdfRoutes]) {
       expect(urls).toContain(route);
     }
     for (const slug of SLUGS) {

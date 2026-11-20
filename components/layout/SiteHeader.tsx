@@ -68,6 +68,7 @@ export function SiteHeader(): React.ReactElement {
             </Link>
           ))}
           <ToolsMenu />
+          <Link href="/download">Download</Link>
           <Link href="/about">About</Link>
         </nav>
 

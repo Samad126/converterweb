@@ -41,6 +41,8 @@ export const AUTHOR = {
   role: "Software Engineer",
   githubFrontend: "https://github.com/Samad126/converterweb",
   githubBackend: "https://github.com/Samad126/converterapi",
+  githubDesktop: "https://github.com/Samad126/converter-desktop",
+  githubCore: "https://github.com/Samad126/converter-core",
   email: "samad.a.alakbarov@gmail.com",
   linkedin: "https://www.linkedin.com/in/samad-alakbarov/",
   portfolio: "https://alakbaroff.com",

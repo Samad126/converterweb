@@ -111,6 +111,9 @@ export function SiteFooter(): React.ReactElement {
                 <Link href="/">Home</Link>
               </li>
               <li>
+                <Link href="/download">Desktop app</Link>
+              </li>
+              <li>
                 <Link href="/about">About</Link>
               </li>
               <li>
@@ -133,6 +136,11 @@ export function SiteFooter(): React.ReactElement {
               <li>
                 <a href={AUTHOR.githubBackend} target="_blank" rel="noopener noreferrer">
                   Backend on GitHub
+                </a>
+              </li>
+              <li>
+                <a href={AUTHOR.githubDesktop} target="_blank" rel="noopener noreferrer">
+                  Desktop app on GitHub
                 </a>
               </li>
               <li>
